@@ -191,6 +191,67 @@ export default function HomePage() {
     return null;
   };
 
+  // Fix list indentation for markdown that has bullet points following numbered items
+  const fixListIndentation = (text: string): string => {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    let inOrderedList = false;
+    let lastOrderedNumber = 0;
+    let blankLinesAfterOrdered = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Check if this is an ordered list item
+      const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/) || trimmed.match(/^(\d+)\)\s+(.*)/);
+      
+      if (orderedMatch) {
+        const number = parseInt(orderedMatch[1], 10);
+        
+        // Check if this continues the sequence
+        if (inOrderedList && number === lastOrderedNumber + 1) {
+          inOrderedList = true;
+          lastOrderedNumber = number;
+          blankLinesAfterOrdered = 0;
+          result.push(line);
+        } else {
+          // New ordered list or gap in sequence
+          inOrderedList = true;
+          lastOrderedNumber = number;
+          blankLinesAfterOrdered = 0;
+          result.push(line);
+        }
+      } else {
+        // Check if this is an unordered list item
+        const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
+        
+        if (unorderedMatch && inOrderedList) {
+          // This bullet should be nested under the last ordered item
+          // Add indentation (2 spaces for one level of nesting)
+          result.push('  ' + line);
+          blankLinesAfterOrdered = 0;
+        } else {
+          // Not a list item or not in ordered list context
+          result.push(line);
+          
+          // Track blank lines after ordered list items
+          if (!trimmed) {
+            if (inOrderedList) {
+              blankLinesAfterOrdered++;
+            }
+          } else if (trimmed && !unorderedMatch && !orderedMatch) {
+            // Non-list, non-empty content - might break the list context
+            // But keep inOrderedList true in case bullet points follow
+            blankLinesAfterOrdered = 0;
+          }
+        }
+      }
+    }
+    
+    return result.join('\n');
+  };
+
   // Markdown to React element renderer
   const renderMarkdown = (text: string): React.ReactNode => {
     if (!text || typeof text !== 'string') return text;
@@ -557,67 +618,6 @@ export default function HomePage() {
     flushTable();
     flushCodeBlock();
     return <>{elements}</>;
-  };
-
-  // Fix list indentation for markdown that has bullet points following numbered items
-  const fixListIndentation = (text: string): string => {
-    const lines = text.split('\n');
-    const result: string[] = [];
-    let inOrderedList = false;
-    let lastOrderedNumber = 0;
-    let blankLinesAfterOrdered = 0;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-      
-      // Check if this is an ordered list item
-      const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/) || trimmed.match(/^(\d+)\)\s+(.*)/);
-      
-      if (orderedMatch) {
-        const number = parseInt(orderedMatch[1], 10);
-        
-        // Check if this continues the sequence
-        if (inOrderedList && number === lastOrderedNumber + 1) {
-          inOrderedList = true;
-          lastOrderedNumber = number;
-          blankLinesAfterOrdered = 0;
-          result.push(line);
-        } else {
-          // New ordered list or gap in sequence
-          inOrderedList = true;
-          lastOrderedNumber = number;
-          blankLinesAfterOrdered = 0;
-          result.push(line);
-        }
-      } else {
-        // Check if this is an unordered list item
-        const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
-        
-        if (unorderedMatch && inOrderedList) {
-          // This bullet should be nested under the last ordered item
-          // Add indentation (2 spaces for one level of nesting)
-          result.push('  ' + line);
-          blankLinesAfterOrdered = 0;
-        } else {
-          // Not a list item or not in ordered list context
-          result.push(line);
-          
-          // Track blank lines after ordered list items
-          if (!trimmed) {
-            if (inOrderedList) {
-              blankLinesAfterOrdered++;
-            }
-          } else if (trimmed && !unorderedMatch && !orderedMatch) {
-            // Non-list, non-empty content - might break the list context
-            // But keep inOrderedList true in case bullet points follow
-            blankLinesAfterOrdered = 0;
-          }
-        }
-      }
-    }
-    
-    return result.join('\n');
   };
 
   // Process inline markdown (bold, italic, code)
