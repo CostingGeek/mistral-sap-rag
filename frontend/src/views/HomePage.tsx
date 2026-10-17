@@ -191,13 +191,13 @@ export default function HomePage() {
     return null;
   };
 
-  // Fix list indentation for markdown that has bullet points following numbered items
+  // Fix list indentation and structure for markdown
   const fixListIndentation = (text: string): string => {
     const lines = text.split('\n');
     const result: string[] = [];
     let inOrderedList = false;
     let lastOrderedNumber = 0;
-    let blankLinesAfterOrdered = 0;
+    let currentOrderedIndent = '';
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -211,39 +211,37 @@ export default function HomePage() {
         
         // Check if this continues the sequence
         if (inOrderedList && number === lastOrderedNumber + 1) {
-          inOrderedList = true;
           lastOrderedNumber = number;
-          blankLinesAfterOrdered = 0;
-          result.push(line);
         } else {
           // New ordered list or gap in sequence
           inOrderedList = true;
           lastOrderedNumber = number;
-          blankLinesAfterOrdered = 0;
-          result.push(line);
         }
+        
+        currentOrderedIndent = line.substring(0, line.length - trimmed.length);
+        result.push(line);
       } else {
         // Check if this is an unordered list item
         const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
         
         if (unorderedMatch && inOrderedList) {
           // This bullet should be nested under the last ordered item
-          // Add indentation (2 spaces for one level of nesting)
-          result.push('  ' + line);
-          blankLinesAfterOrdered = 0;
+          // Remove any existing indentation and add exactly 2 spaces
+          result.push('  ' + trimmed);
         } else {
-          // Not a list item or not in ordered list context
+          // Not a list item - keep as is
           result.push(line);
           
-          // Track blank lines after ordered list items
-          if (!trimmed) {
-            if (inOrderedList) {
-              blankLinesAfterOrdered++;
+          // Check if this line breaks the ordered list context
+          if (trimmed && !unorderedMatch) {
+            // Non-list content - check if it contains list-like text
+            // For example: "Relevant IMG Activities:" should break the list
+            if (/^[A-Z][a-zA-Z ]+:.*Source \d+$/.test(trimmed) ||
+                /^Source \d+:/.test(trimmed) ||
+                /^[A-Z].*:$/.test(trimmed)) {
+              // This might be a header for sources - end ordered list context
+              inOrderedList = false;
             }
-          } else if (trimmed && !unorderedMatch && !orderedMatch) {
-            // Non-list, non-empty content - might break the list context
-            // But keep inOrderedList true in case bullet points follow
-            blankLinesAfterOrdered = 0;
           }
         }
       }
