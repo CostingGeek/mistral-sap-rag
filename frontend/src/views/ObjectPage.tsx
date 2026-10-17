@@ -134,7 +134,7 @@ export default function ObjectPage() {
                     className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                   >
                     <Link
-                      to={`/object/${node.id}`}
+                      to={`/object/${encodeURIComponent(node.id)}`}
                       className="block"
                     >
                       <div className="font-medium text-blue-600 truncate">

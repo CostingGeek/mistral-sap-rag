@@ -383,8 +383,17 @@ Open Decisions: {len(decisions)}
 # =============================================================================
 # Object Endpoints
 # =============================================================================
+# Note: the graph route must be declared before the object route because the
+# :path converter is greedy and would otherwise also capture "/graph" suffixes.
 
-@app.get("/api/object/{object_id}")
+@app.get("/api/object/{object_id:path}/graph")
+def get_object_graph(object_id: str):
+    """Get graph data (nodes and edges) for an object."""
+    graph = bq_client.get_related_objects(object_id, depth=1)
+    return graph
+
+
+@app.get("/api/object/{object_id:path}")
 def get_object(object_id: str):
     """Get full information for an SAP object."""
     obj_info = bq_client.get_object_info(object_id)
@@ -392,13 +401,6 @@ def get_object(object_id: str):
         raise HTTPException(status_code=404, detail="Object not found")
     
     return obj_info
-
-
-@app.get("/api/object/{object_id}/graph")
-def get_object_graph(object_id: str):
-    """Get graph data (nodes and edges) for an object."""
-    graph = bq_client.get_related_objects(object_id, depth=1)
-    return graph
 
 
 # =============================================================================

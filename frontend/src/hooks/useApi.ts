@@ -47,11 +47,11 @@ export const useApi = () => {
 
     // Objects
     getObject: useCallback((objectId: string) =>
-      request<any>('GET', `/object/${objectId}`)
+      request<any>('GET', `/object/${encodeURIComponent(objectId)}`)
     , []),
 
     getObjectGraph: useCallback((objectId: string) =>
-      request<any>('GET', `/object/${objectId}/graph`)
+      request<any>('GET', `/object/${encodeURIComponent(objectId)}/graph`)
     , []),
 
     // Decisions
