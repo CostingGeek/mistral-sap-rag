@@ -402,32 +402,60 @@ export default function HomePage() {
           }
           
           if (targetListIndex >= 0 && listStack[targetListIndex].type === newListType) {
-            // Same type and appropriate indentation - add to this list
-            const listItem: ListItemNode = {
-              type: newListType,
-              number: listNumber,
-              content: processedContent,
-              children: []
-            };
-            listStack[targetListIndex].items.push(listItem);
-            // If this context has a parent item, also add to its children
-            if (listStack[targetListIndex].parentItem) {
-              listStack[targetListIndex].parentItem.children.push(listItem);
+            // Check if this should be nested (greater indentation)
+            const targetIndent = listStack[targetListIndex].indent.length;
+            if (currentIndentLevel > targetIndent) {
+              // Nested under the last item of the target list
+              const parentList = listStack[targetListIndex];
+              const lastParentItem = parentList.items[parentList.items.length - 1];
+              const listItem: ListItemNode = {
+                type: newListType,
+                number: listNumber,
+                content: processedContent,
+                children: []
+              };
+              lastParentItem.children.push(listItem);
+              
+              // Pop everything above the parent list
+              while (listStack.length > targetListIndex + 1) {
+                listStack.pop();
+              }
+              
+              // Push new list context for children of this nested item
+              listStack.push({
+                type: newListType,
+                items: [],
+                indent: indent,
+                parentItem: lastParentItem
+              });
+            } else {
+              // Same level - add to this list
+              const listItem: ListItemNode = {
+                type: newListType,
+                number: listNumber,
+                content: processedContent,
+                children: []
+              };
+              listStack[targetListIndex].items.push(listItem);
+              // If this context has a parent item, also add to its children
+              if (listStack[targetListIndex].parentItem) {
+                listStack[targetListIndex].parentItem.children.push(listItem);
+              }
+              
+              // If we're adding to a deeper list, pop shallower lists from stack
+              while (listStack.length > targetListIndex + 1) {
+                listStack.pop();
+              }
+              
+              // Push new list context for potential children
+              const parentItemForChildren = listStack[targetListIndex].items[listStack[targetListIndex].items.length - 1];
+              listStack.push({
+                type: newListType,
+                items: [],
+                indent: indent,
+                parentItem: parentItemForChildren
+              });
             }
-            
-            // If we're adding to a deeper list, pop shallower lists from stack
-            while (listStack.length > targetListIndex + 1) {
-              listStack.pop();
-            }
-            
-            // Push new list context for potential children
-            const parentItemForChildren = listStack[targetListIndex].items[listStack[targetListIndex].items.length - 1];
-            listStack.push({
-              type: newListType,
-              items: [],
-              indent: indent,
-              parentItem: parentItemForChildren
-            });
           } else {
             // Different type - check if we should resume a parent list of the same type
             // For ordered lists, check if there's an ordered list at a higher level
