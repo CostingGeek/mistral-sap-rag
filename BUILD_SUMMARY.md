@@ -82,10 +82,22 @@ This document describes the simplified SAP RAG Chat Application, built to provid
 - Simplified navigation (no menu)
 - Removed Graph container from Home page
 
+### Markdown Rendering (HomePage.tsx)
+- Stack-based list parser renders assistant answers as a proper hierarchy:
+  - Numbered (L1) items in one continuous `<ol>`, even when separated by blank lines
+  - Bulleted (L2) details nested inside their parent numbered item as siblings
+  - Deeper levels nested according to indentation
+- Markdown preprocessing (`fixListIndentation`) normalizes LLM output before parsing:
+  - Bullets following numbered items are re-indented to one consistent level
+  - Numbering gaps are renumbered to stay sequential
+  - Source label lines are converted to bullets
+- Tables, code blocks, headers, and inline styles (bold/italic/code) with unique React keys
+- Citation titles cleaned (section type suffix removed)
+
 ### UX Improvements
 - Conversation-only scrollbar
 - Maximized chat window height
-- Proper markdown list rendering
+- Robust markdown list rendering (numbered items with nested bullet details; see Markdown Rendering above)
 - Reset button for conversation
 - Citation popup with logo
 - Underline for all links

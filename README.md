@@ -6,7 +6,7 @@ A local web application that lets users chat with SAP Customizing documentation 
 
 - **Chat** against SAP Customizing documentation with RAG and agentic retrieval
 - Source citations with clickable references
-- Knowledge graph visualization
+- Rich markdown rendering of assistant answers: nested numbered/bulleted lists, tables, code blocks, and inline styles
 - Conversation history with reset capability
 
 ## Architecture
