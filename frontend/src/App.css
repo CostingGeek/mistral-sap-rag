@@ -1,0 +1,284 @@
+/* App-specific styles using Mistral design system */
+
+/* Loading spinner with brand color */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fade in animation */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-standard;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide in from right */
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-standard;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Chat message styles with brand colors */
+.chat-message {
+  max-width: 80%;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.chat-message.user {
+  margin-left: auto;
+  background-color: #fffaeb;
+  color: #1f1f1f;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message.assistant {
+  margin-right: auto;
+  background-color: #fffaeb;
+  color: #1f1f1f;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Code block styles */
+.pre {
+  background-color: #fff0c2;
+  padding: 1rem;
+  border-radius: 2px;
+  overflow-x: auto;
+  color: #1f1f1f;
+}
+
+/* Citation styles with brand colors */
+.citation {
+  border-left: 3px solid #fa520f;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  color: #3d3d3d;
+}
+
+/* Verdict badge styles with brand colors */
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.verdict-fit {
+  background-color: #17a34a;
+  color: #fffaeb;
+}
+
+.verdict-partial {
+  background-color: #eab308;
+  color: #1f1f1f;
+}
+
+.verdict-gap {
+  background-color: #dc2626;
+  color: #fffaeb;
+}
+
+.verdict-question {
+  background-color: #fa520f;
+  color: #fffaeb;
+}
+
+/* Graph view styles */
+.graph-container {
+  width: 100%;
+  height: 500px;
+  border: 1px solid #f0e8c8;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.graph-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Fullscreen controls */
+.graph-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1001;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.graph-controls button {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #333;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.graph-controls button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Table styles */
+.table-container {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f0e8c8;
+}
+
+.table th {
+  background-color: #fff0c2;
+  font-weight: 400;
+  color: #3d3d3d;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.table tr:hover {
+  background-color: #fffaeb;
+}
+
+/* Upload area styles */
+.upload-area {
+  border: 2px dashed #f0e8c8;
+  border-radius: 4px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease-standard;
+  background: #fffaeb;
+}
+
+.upload-area:hover {
+  border-color: #fa520f;
+  background-color: #fff0c2;
+}
+
+.upload-area.dragover {
+  border-color: #fa520f;
+  background-color: #fff0c2;
+}
+
+/* Status indicator styles */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-pending {
+  color: #3d3d3d;
+}
+
+.status-processing {
+  color: #eab308;
+}
+
+.status-completed {
+  color: #17a34a;
+}
+
+.status-failed {
+  color: #dc2626;
+}
+
+/* Hero section */
+.hero {
+  padding: 3rem 0;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  color: #1f1f1f;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: #3d3d3d;
+  max-width: 700px;
+}
+
+/* Bold content formatting for popup */
+.content-with-bold {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.content-with-bold strong {
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.content-with-bold pre {
+  background-color: #f8f8f8;
+  padding: 0.5rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

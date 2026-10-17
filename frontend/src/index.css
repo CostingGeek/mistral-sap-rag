@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mistral AI Design System - Custom Styles */
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  
+  body {
+    @apply bg-ivory text-ink antialiased;
+  }
+}
+
+@layer components {
+  /* Primary Button - saturated orange, flat, sharp */
+  .btn-primary {
+    @apply bg-mistral text-ivory px-6 py-3 rounded-md text-sm uppercase tracking-widest 
+           hover:bg-flame transition-colors duration-150 ease-standard 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mistral focus:ring-opacity-30;
+  }
+  
+  /* Secondary Button - cream surface with warm hairline */
+  .btn-secondary {
+    @apply bg-cream text-ink border border-borderWarm px-6 py-3 rounded-md 
+           text-sm uppercase tracking-widest hover:bg-gold transition-colors duration-150;
+  }
+  
+  /* Dark Button - near-black anchor */
+  .btn-dark {
+    @apply bg-ink text-ivory px-6 py-3 rounded-md text-sm uppercase tracking-widest 
+           hover:bg-ink-2 transition-colors;
+  }
+  
+  /* Danger Button - red */
+  .btn-danger {
+    @apply bg-crimson text-ivory px-6 py-3 rounded-md text-sm uppercase tracking-widest 
+           hover:bg-red-700 transition-colors;
+  }
+  
+  /* Card - warm surface */
+  .card {
+    @apply bg-cream border border-borderWarm rounded-lg p-6 
+           shadow-warm-sm hover:shadow-warm transition-shadow duration-200 ease-standard;
+  }
+  
+  /* Sunset stripe - brand signature */
+  .sunset-stripe {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, #c00018, #fa520f, #ff8105, #ffd900, #fffaeb);
+  }
+  
+  /* Block gradient text */
+  .text-block-gradient {
+    background: linear-gradient(90deg, #ffd900, #ffa110, #fa520f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  /* Block gradient background */
+  .bg-block-gradient {
+    background: linear-gradient(90deg, #ffd900, #ffa110, #fa520f);
+  }
+  
+  /* Section label */
+  .section-label {
+    @apply text-xs uppercase tracking-widest text-mistral;
+  }
+}
+
+/* Custom scrollbar with warm tones */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0e8c8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff8105;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #fa520f;
+}
