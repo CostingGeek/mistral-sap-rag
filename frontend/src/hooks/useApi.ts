@@ -40,61 +40,9 @@ export const useApi = () => {
 
   // Specific API methods
   const api = {
-    // Sessions
-    createSession: useCallback((kind: string, title?: string) =>
-      request<{ session_id: string }>('POST', '/sessions', { kind, title })
-    , []),
-
-    listSessions: useCallback((limit?: number) =>
-      request<any[]>('GET', `/sessions${limit ? `?limit=${limit}` : ''}`)
-    , []),
-
-    getSession: useCallback((sessionId: string) =>
-      request<any>('GET', `/sessions/${sessionId}`)
-    , []),
-
-    clearAllSessions: useCallback(() =>
-      request<any>('DELETE', '/sessions')
-    , []),
-
     // Chat
     chat: useCallback((data: { message: string; session_id?: string; history?: any[] }) =>
       request<any>('POST', '/chat', data)
-    , []),
-
-    // PDF
-    uploadPdf: useCallback((file: File, title?: string, sessionId?: string) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (title) {
-        formData.append('title', title);
-      }
-      if (sessionId) {
-        formData.append('session_id', sessionId);
-      }
-
-      return fetch(`${API_BASE}/upload/pdf`, {
-        method: 'POST',
-        body: formData,
-      }).then(async (response) => {
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          return { error: error.detail || 'Upload failed' };
-        }
-        return { data: await response.json() };
-      });
-    }, []),
-
-    processPdf: useCallback((sessionId: string) =>
-      request<any>('POST', `/sessions/${sessionId}/process-pdf`)
-    , []),
-
-    getPdfStatus: useCallback((sessionId: string) =>
-      request<any>('GET', `/sessions/${sessionId}/status`)
-    , []),
-
-    getReport: useCallback((sessionId: string) =>
-      request<any>('GET', `/report/${sessionId}`)
     , []),
 
     // Objects

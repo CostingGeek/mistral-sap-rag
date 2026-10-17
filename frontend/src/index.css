@@ -72,21 +72,21 @@
   }
 }
 
-/* Custom scrollbar with warm tones */
+/* Custom scrollbar with white/transparent track */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f0e8c8;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ff8105;
+  background: #e5e7eb;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #fa520f;
+  background: #9ca3af;
 }

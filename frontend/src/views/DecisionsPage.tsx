@@ -94,9 +94,6 @@ export default function DecisionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link to={`/report/${sessionId}`} className="btn btn-secondary text-sm">
-            View Report
-          </Link>
           <button
             onClick={fetchDecisions}
             className="btn btn-secondary text-sm"

@@ -29,6 +29,7 @@ class ChatService:
         mistral_client: MistralClient
     ):
         self.bq_client = bq_client
+        self._object_info_cache: Dict[str, Optional[Dict[str, Any]]] = {}
         self.mistral_client = mistral_client
     
     def classify_intent(self, question: str) -> Dict[str, Any]:
@@ -141,7 +142,10 @@ Return only the JSON object, no other text.
                     
                     # Get chunks for the related object
                     if edge["target"] not in object_ids:
-                        obj_info = self.bq_client.get_object_info(edge["target"])
+                        obj_id = edge["target"]
+                        if obj_id not in self._object_info_cache:
+                            self._object_info_cache[obj_id] = self.bq_client.get_object_info(obj_id)
+                        obj_info = self._object_info_cache[obj_id]
                         if obj_info and obj_info.get("sections"):
                             # Create chunks for USE and SHORTTEXT sections
                             for section_type, content in obj_info["sections"].items():

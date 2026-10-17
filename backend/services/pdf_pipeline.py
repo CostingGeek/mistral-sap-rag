@@ -339,6 +339,17 @@ class PDFPipeline:
                 verdict_counts[verdict] += 1
         
         total_requirements = len(requirements)
+        # Handle division by zero
+        if total_requirements == 0:
+            return """
+# Fit-Gap Analysis Summary
+
+## Overview
+No requirements were analyzed.
+
+## Coverage Statistics
+No requirements to display.
+"""
         
         summary = f"""
 # Fit-Gap Analysis Summary

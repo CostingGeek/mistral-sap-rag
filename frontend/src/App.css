@@ -48,7 +48,7 @@
 
 /* Chat message styles with brand colors */
 .chat-message {
-  max-width: 80%;
+  max-width: 85%;
   margin-bottom: 1rem;
   padding: 1rem;
   border-radius: 8px;
@@ -58,16 +58,20 @@
 
 .chat-message.user {
   margin-left: auto;
+  margin-right: 0;
   background-color: #fffaeb;
   color: #1f1f1f;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding-right: 2rem;
 }
 
 .chat-message.assistant {
   margin-right: auto;
+  margin-left: 0;
   background-color: #fffaeb;
   color: #1f1f1f;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding-left: 2rem;
 }
 
 /* Code block styles */

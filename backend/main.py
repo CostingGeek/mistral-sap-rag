@@ -246,7 +246,7 @@ def process_pdf(
     return {"status": "processing", "session_id": session_id}
 
 
-async def _process_pdf_background(
+def _process_pdf_background(
     session_id: str,
     bq_client: BigQueryClient,
     pdf_pipeline: PDFPipeline

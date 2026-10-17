@@ -28,6 +28,7 @@ class VerdictService:
         self.bq_client = bq_client
         self.mistral_client = mistral_client
         self.requirement_service = requirement_service
+        self._object_info_cache: Dict[str, Optional[Dict[str, Any]]] = {}
     
     def match_requirement(
         self,
@@ -77,7 +78,9 @@ class VerdictService:
             
             # Fetch full object info for evidence
             if chunk["section_type"] not in object_groups[obj_id]["sections"]:
-                obj_info = self.bq_client.get_object_info(obj_id)
+                if obj_id not in self._object_info_cache:
+                    self._object_info_cache[obj_id] = self.bq_client.get_object_info(obj_id)
+                obj_info = self._object_info_cache[obj_id]
                 if obj_info:
                     for section_type, content in obj_info.get("sections", {}).items():
                         if section_type in ["USE", "SHORTTEXT", "PRECONDITIONS"]:
@@ -233,7 +236,7 @@ Important:
         
         # If LLM says "fit" but the best match distance is too high, override
         if verdict_result.get("verdict") == "fit" and matches:
-            if matches[0]["distance"] > 0.4:  # Threshold from spec
+            if matches[0]["distance"] > settings.similarity_threshold:  # Configurable threshold
                 return Verdict.QUESTION.value
         
         return verdict_result.get("verdict", Verdict.QUESTION.value)

@@ -211,9 +211,14 @@ class BigQueryClient:
                 c.object_id,
                 c.title,
                 c.section_type,
-                ML.DISTANCE(e.embedding, @q_vec, 'COSINE') AS distance,
+                distance,
                 c.content_clean AS content
-            FROM `{settings.gcp_project}.{self.dataset_id}.doktl_embeddings` AS e
+            FROM (
+                SELECT 
+                    chunk_id,
+                    ML.DISTANCE(embedding, @q_vec) AS distance
+                FROM `{settings.gcp_project}.{self.dataset_id}.doktl_embeddings`
+            ) AS e
             JOIN `{settings.gcp_project}.{self.dataset_id}.doktl_clean` AS c 
                 ON c.chunk_id = e.chunk_id
             WHERE c.embed = TRUE

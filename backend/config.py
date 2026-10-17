@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # GCP Configuration
-    gcp_project: str = "mistral-sap"
+    gcp_project: str = ""
     bq_dataset: str = "sap_rag"
-    bucket_name: str = "mistral-sap-rag"
+    bucket_name: str = ""
     
     # GCP Service Account (base64 encoded JSON key)
     gcp_sa_key_base64: Optional[str] = None
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     
     # Model Configuration
     embed_model: str = "mistral-embed"
-    chat_model: str = "mistral-medium"
+    chat_model: str = "mistral-medium-latest"
     
     # Retrieval Configuration
     retrieval_k: int = 8
