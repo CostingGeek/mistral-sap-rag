@@ -204,6 +204,7 @@ export default function HomePage() {
       type: 'ordered' | 'unordered';
       items: ListItemNode[];
       indent: string;
+      parentItem?: ListItemNode; // For nested lists, reference to parent item
     };
     
     const listStack: ListContext[] = [];
@@ -409,6 +410,10 @@ export default function HomePage() {
               children: []
             };
             listStack[targetListIndex].items.push(listItem);
+            // If this context has a parent item, also add to its children
+            if (listStack[targetListIndex].parentItem) {
+              listStack[targetListIndex].parentItem.children.push(listItem);
+            }
             
             // If we're adding to a deeper list, pop shallower lists from stack
             while (listStack.length > targetListIndex + 1) {
@@ -416,10 +421,12 @@ export default function HomePage() {
             }
             
             // Push new list context for potential children
+            const parentItemForChildren = listStack[targetListIndex].items[listStack[targetListIndex].items.length - 1];
             listStack.push({
               type: newListType,
               items: [],
-              indent: indent
+              indent: indent,
+              parentItem: parentItemForChildren
             });
           } else {
             // Different type - check if we should resume a parent list of the same type
@@ -445,6 +452,10 @@ export default function HomePage() {
                 children: []
               };
               parentList.items.push(listItem);
+              // If this context has a parent item, also add to its children
+              if (parentList.parentItem) {
+                parentList.parentItem.children.push(listItem);
+              }
               
               // Pop everything above the parent list
               while (listStack.length > parentOfSameTypeIndex + 1) {
@@ -452,10 +463,12 @@ export default function HomePage() {
               }
               
               // Push new list context for potential children
+              const parentItemForChildren = parentList.items[parentList.items.length - 1];
               listStack.push({
                 type: newListType,
                 items: [],
-                indent: indent
+                indent: indent,
+                parentItem: parentItemForChildren
               });
             } else if (targetListIndex >= 0 && listStack[targetListIndex].items.length > 0) {
               // We have a parent list - add as nested child to last item
@@ -475,7 +488,8 @@ export default function HomePage() {
               listStack.push({
                 type: newListType,
                 items: [newList],
-                indent: indent
+                indent: indent,
+                parentItem: lastParentItem
               });
             } else {
               // No parent list or empty parent - start fresh
