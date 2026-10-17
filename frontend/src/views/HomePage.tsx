@@ -197,11 +197,13 @@ export default function HomePage() {
     const result: string[] = [];
     let inOrderedList = false;
     let lastOrderedNumber = 0;
-    let hasBulletAfterOrdered = false;
+    let lastListIndent = '';
+    let currentNestedLevel = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
+      const leadingSpaces = line.match(/^\s*/)?.[0] || '';
       
       // Check if this is an ordered list item
       const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/) || trimmed.match(/^(\d+)\)\s+(.*)/);
@@ -216,43 +218,55 @@ export default function HomePage() {
           // New ordered list or gap in sequence
           inOrderedList = true;
           lastOrderedNumber = number;
-          hasBulletAfterOrdered = false;
+          currentNestedLevel = 0;
         }
         
-        result.push(line);
+        lastListIndent = leadingSpaces;
+        result.push(lastListIndent + trimmed);
       } else {
         // Check if this is an unordered list item
         const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
         
         if (unorderedMatch && inOrderedList) {
-          // This bullet should be nested under the last ordered item
-          // Remove any existing indentation and add exactly 2 spaces
-          result.push('  ' + trimmed);
-          hasBulletAfterOrdered = true;
-        } else if (hasBulletAfterOrdered && trimmed && !unorderedMatch) {
-          // If we had a bullet after ordered and now we have a non-bullet, non-empty line,
-          // check if it's a source reference that should be part of the previous bullet
-          // Lines like "Source: Source 1, Source 2" or "Source 1" or "Relevant IMG Activities: ..."
+          // Check if this is a source reference line (should be at nested level)
+          const content = unorderedMatch[1];
+          const isSource = /^[Ss]ource.*\d+/.test(content) || 
+                          /^<.*>.*Source.*\d+/.test(content);
+          
+          if (isSource && currentNestedLevel === 0) {
+            // This is a source under a "Relevant IMG..." bullet
+            // It should be at nested level (4 spaces)
+            result.push('    ' + trimmed);
+            currentNestedLevel = 1;
+          } else {
+            // Regular bullet - reset to base nested level (2 spaces)
+            result.push('  ' + trimmed);
+            currentNestedLevel = 0;
+          }
+        } else if (trimmed && inOrderedList && !unorderedMatch) {
+          // Non-bullet line in ordered list context
+          // Check if it looks like a continuation or a label
           if (/^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed) ||
               /^Source[\s\u2013-]*.*\d+/.test(trimmed) ||
-              /^[A-Z].*Activity.*:.*/.test(trimmed)) {
-            // This is a source reference - it should be part of the previous bullet
-            // Don't add it as a new bullet, but as a continuation
+              /^[A-Z].*[Aa]ctivity.*:.*/.test(trimmed)) {
+            // This is a label like "Relevant IMG Activities:"
+            // It should be a bullet at the same level as other bullets
             result.push('  ' + trimmed);
           } else {
             result.push(line);
           }
         } else {
-          // Not a list item - keep as is
+          // Not a list item or not in ordered list context
           result.push(line);
           
-          // If this is a non-empty, non-list line, it might break the context
-          if (trimmed && !unorderedMatch && !orderedMatch) {
-            // Check if this line breaks the ordered list context
-            // Empty lines don't break it, but certain patterns might
-            if (!/^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed) &&
-                !/^Source[\s\u2013-]*.*\d+/.test(trimmed)) {
-              // Keep inOrderedList true for now
+          if (!trimmed) {
+            // Empty line - keep context
+          } else if (trimmed && !unorderedMatch && !orderedMatch) {
+            // Non-list content - might break the context
+            // Check if it's a section header or similar
+            if (/^<h[1-6]>/.test(trimmed) || /^#/.test(trimmed)) {
+              inOrderedList = false;
+              currentNestedLevel = 0;
             }
           }
         }
