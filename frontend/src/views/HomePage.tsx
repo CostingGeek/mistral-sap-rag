@@ -565,6 +565,7 @@ export default function HomePage() {
     const result: string[] = [];
     let inOrderedList = false;
     let lastOrderedNumber = 0;
+    let blankLinesAfterOrdered = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -580,11 +581,13 @@ export default function HomePage() {
         if (inOrderedList && number === lastOrderedNumber + 1) {
           inOrderedList = true;
           lastOrderedNumber = number;
+          blankLinesAfterOrdered = 0;
           result.push(line);
         } else {
           // New ordered list or gap in sequence
           inOrderedList = true;
           lastOrderedNumber = number;
+          blankLinesAfterOrdered = 0;
           result.push(line);
         }
       } else {
@@ -593,16 +596,22 @@ export default function HomePage() {
         
         if (unorderedMatch && inOrderedList) {
           // This bullet should be nested under the last ordered item
-          // Add indentation
+          // Add indentation (2 spaces for one level of nesting)
           result.push('  ' + line);
+          blankLinesAfterOrdered = 0;
         } else {
           // Not a list item or not in ordered list context
           result.push(line);
           
-          // Check if this line breaks the ordered list context
-          if (trimmed && !unorderedMatch && !orderedMatch) {
-            // Non-list content - check if we should end ordered list context
-            // But keep it for now in case bullet points follow
+          // Track blank lines after ordered list items
+          if (!trimmed) {
+            if (inOrderedList) {
+              blankLinesAfterOrdered++;
+            }
+          } else if (trimmed && !unorderedMatch && !orderedMatch) {
+            // Non-list, non-empty content - might break the list context
+            // But keep inOrderedList true in case bullet points follow
+            blankLinesAfterOrdered = 0;
           }
         }
       }
