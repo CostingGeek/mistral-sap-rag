@@ -196,14 +196,12 @@ export default function HomePage() {
     const lines = text.split('\n');
     const result: string[] = [];
     let inOrderedList = false;
-    let lastOrderedNumber = 0;
-    let lastListIndent = '';
+    let expectedNumber = 1;
     let currentNestedLevel = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
-      const leadingSpaces = line.match(/^\s*/)?.[0] || '';
       
       // Check if this is an ordered list item
       const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/) || trimmed.match(/^(\d+)\)\s+(.*)/);
@@ -211,47 +209,34 @@ export default function HomePage() {
       if (orderedMatch) {
         const number = parseInt(orderedMatch[1], 10);
         
-        // Check if this continues the sequence
-        if (inOrderedList && number === lastOrderedNumber + 1) {
-          lastOrderedNumber = number;
+        // Fix numbering gaps
+        if (inOrderedList && number > expectedNumber) {
+          // There's a gap - renumber to maintain sequence
+          result.push(expectedNumber + '. ' + orderedMatch[2]);
         } else {
-          // New ordered list or gap in sequence
-          inOrderedList = true;
-          lastOrderedNumber = number;
-          currentNestedLevel = 0;
+          result.push(line);
         }
         
-        lastListIndent = leadingSpaces;
-        result.push(lastListIndent + trimmed);
+        inOrderedList = true;
+        expectedNumber = number + 1;
+        currentNestedLevel = 0;
       } else {
         // Check if this is an unordered list item
         const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
         
         if (unorderedMatch && inOrderedList) {
-          // Check if this is a source reference line (should be at nested level)
-          const content = unorderedMatch[1];
-          const isSource = /^[Ss]ource.*\d+/.test(content) || 
-                          /^<.*>.*Source.*\d+/.test(content);
-          
-          if (isSource && currentNestedLevel === 0) {
-            // This is a source under a "Relevant IMG..." bullet
-            // It should be at nested level (4 spaces)
-            result.push('    ' + trimmed);
-            currentNestedLevel = 1;
-          } else {
-            // Regular bullet - reset to base nested level (2 spaces)
-            result.push('  ' + trimmed);
-            currentNestedLevel = 0;
-          }
+          // Strip any existing indentation and add exactly 2 spaces
+          // All bullets under ordered items should be at the same level
+          result.push('  ' + trimmed);
+          currentNestedLevel = 0;
         } else if (trimmed && inOrderedList && !unorderedMatch) {
           // Non-bullet line in ordered list context
-          // Check if it looks like a continuation or a label
+          // Check if it's a label that should be a bullet
           if (/^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed) ||
-              /^Source[\s\u2013-]*.*\d+/.test(trimmed) ||
-              /^[A-Z].*[Aa]ctivity.*:.*/.test(trimmed)) {
-            // This is a label like "Relevant IMG Activities:"
-            // It should be a bullet at the same level as other bullets
-            result.push('  ' + trimmed);
+              /^[A-Z][a-zA-Z ]+:.*\d+/.test(trimmed) ||
+              /^Source[\s\u2013-]*.*\d+/.test(trimmed)) {
+            // Convert labels with sources to bullets
+            result.push('  - ' + trimmed);
           } else {
             result.push(line);
           }
@@ -259,12 +244,9 @@ export default function HomePage() {
           // Not a list item or not in ordered list context
           result.push(line);
           
-          if (!trimmed) {
-            // Empty line - keep context
-          } else if (trimmed && !unorderedMatch && !orderedMatch) {
-            // Non-list content - might break the context
-            // Check if it's a section header or similar
-            if (/^<h[1-6]>/.test(trimmed) || /^#/.test(trimmed)) {
+          if (trimmed && !unorderedMatch && !orderedMatch) {
+            // Non-list content - check if it breaks the context
+            if (/^<h[1-6]>/.test(trimmed) || /^#/.test(trimmed) || /^\d+\./.test(trimmed)) {
               inOrderedList = false;
               currentNestedLevel = 0;
             }
