@@ -197,7 +197,6 @@ export default function HomePage() {
     const result: string[] = [];
     let inOrderedList = false;
     let expectedNumber = 1;
-    let currentNestedLevel = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -212,14 +211,15 @@ export default function HomePage() {
         // Fix numbering gaps
         if (inOrderedList && number > expectedNumber) {
           // There's a gap - renumber to maintain sequence
-          result.push(expectedNumber + '. ' + orderedMatch[2]);
+          const originalIndent = line.substring(0, line.length - trimmed.length);
+          result.push(originalIndent + expectedNumber + '. ' + orderedMatch[2]);
+          expectedNumber++;
         } else {
           result.push(line);
+          expectedNumber = number + 1;
         }
         
         inOrderedList = true;
-        expectedNumber = number + 1;
-        currentNestedLevel = 0;
       } else {
         // Check if this is an unordered list item
         const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
@@ -228,7 +228,6 @@ export default function HomePage() {
           // Strip any existing indentation and add exactly 2 spaces
           // All bullets under ordered items should be at the same level
           result.push('  ' + trimmed);
-          currentNestedLevel = 0;
         } else if (trimmed && inOrderedList && !unorderedMatch) {
           // Non-bullet line in ordered list context
           // Check if it's a label that should be a bullet
@@ -246,9 +245,8 @@ export default function HomePage() {
           
           if (trimmed && !unorderedMatch && !orderedMatch) {
             // Non-list content - check if it breaks the context
-            if (/^<h[1-6]>/.test(trimmed) || /^#/.test(trimmed) || /^\d+\./.test(trimmed)) {
+            if (/^<h[1-6]>/.test(trimmed) || /^#/.test(trimmed)) {
               inOrderedList = false;
-              currentNestedLevel = 0;
             }
           }
         }
@@ -287,7 +285,6 @@ export default function HomePage() {
     let inCodeBlock = false;
     let codeBlockContent: string[] = [];
     let blankLineCount = 0;
-    let lastListContext: ListContext | null = null;
 
     const flushLists = () => {
       // Render all lists in the stack from root to deepest
@@ -343,10 +340,6 @@ export default function HomePage() {
 
       // Reset blank line tracking for non-empty lines
       if (blankLineCount > 0) {
-        // Remember we were in a list before blank lines
-        if (listStack.length > 0) {
-          lastListContext = listStack[listStack.length - 1];
-        }
         blankLineCount = 0;
       }
 
@@ -444,9 +437,10 @@ export default function HomePage() {
         inTable = false;
         
         // Check for ordered list items (e.g., "1. " or "2)" or indented "   1. ")
-        const orderedMatch = trimmed.match(/^(\s*)(\d+)\.\s+(.*)/) || trimmed.match(/^(\s*)(\d+)\)\s+(.*)/);
+        // Match against the raw line so indentation is preserved
+        const orderedMatch = line.match(/^(\s*)(\d+)\.\s+(.*)/) || line.match(/^(\s*)(\d+)\)\s+(.*)/);
         // Check for unordered list items (e.g., "- " or "* " or indented "   - ")
-        const unorderedMatch = trimmed.match(/^(\s*)[-*\u2022]\s+(.*)/);
+        const unorderedMatch = line.match(/^(\s*)[-*\u2022]\s+(.*)/);
 
         if (orderedMatch || unorderedMatch) {
           const isOrdered = !!orderedMatch;
@@ -462,11 +456,6 @@ export default function HomePage() {
           // Find the appropriate list in the stack
           let targetListIndex = listStack.length - 1;
           
-          // If we have a lastListContext from blank lines, use it
-          if (lastListContext && currentIndentLevel <= lastListContext.indent.length) {
-            targetListIndex = listStack.findIndex(l => l === lastListContext);
-          }
-          
           // Find the deepest list with indentation <= current
           while (targetListIndex >= 0 && listStack[targetListIndex].indent.length > currentIndentLevel) {
             targetListIndex--;
@@ -476,7 +465,7 @@ export default function HomePage() {
             // Check if this should be nested (greater indentation)
             const targetIndent = listStack[targetListIndex].indent.length;
             if (currentIndentLevel > targetIndent) {
-              // Nested under the last item of the target list
+              // Deeper: child of the last item in the target list
               const parentList = listStack[targetListIndex];
               const lastParentItem = parentList.items[parentList.items.length - 1];
               const listItem: ListItemNode = {
@@ -492,15 +481,15 @@ export default function HomePage() {
                 listStack.pop();
               }
               
-              // Push new list context for children of this nested item
+              // Push a context for this nesting level containing the item
               listStack.push({
                 type: newListType,
-                items: [],
+                items: [listItem],
                 indent: indent,
                 parentItem: lastParentItem
               });
             } else {
-              // Same level - add to this list
+              // Same level: sibling, add to this list
               const listItem: ListItemNode = {
                 type: newListType,
                 number: listNumber,
@@ -510,22 +499,13 @@ export default function HomePage() {
               listStack[targetListIndex].items.push(listItem);
               // If this context has a parent item, also add to its children
               if (listStack[targetListIndex].parentItem) {
-                listStack[targetListIndex].parentItem.children.push(listItem);
+                listStack[targetListIndex].parentItem!.children.push(listItem);
               }
               
-              // If we're adding to a deeper list, pop shallower lists from stack
+              // Pop deeper list contexts from the stack
               while (listStack.length > targetListIndex + 1) {
                 listStack.pop();
               }
-              
-              // Push new list context for potential children
-              const parentItemForChildren = listStack[targetListIndex].items[listStack[targetListIndex].items.length - 1];
-              listStack.push({
-                type: newListType,
-                items: [],
-                indent: indent,
-                parentItem: parentItemForChildren
-              });
             }
           } else {
             // Different type - check if we should resume a parent list of the same type
@@ -560,16 +540,7 @@ export default function HomePage() {
               while (listStack.length > parentOfSameTypeIndex + 1) {
                 listStack.pop();
               }
-              
-              // Push new list context for potential children
-              const parentItemForChildren = parentList.items[parentList.items.length - 1];
-              listStack.push({
-                type: newListType,
-                items: [],
-                indent: indent,
-                parentItem: parentItemForChildren
-              });
-            } else if (targetListIndex >= 0 && listStack[targetListIndex].items.length > 0) {
+            } else if (targetListIndex >= 0 && listStack[targetListIndex].items.length > 0 && currentIndentLevel > listStack[targetListIndex].indent.length) {
               // We have a parent list - add as nested child to last item
               const parentList = listStack[targetListIndex];
               const lastParentItem = parentList.items[parentList.items.length - 1];
@@ -583,7 +554,10 @@ export default function HomePage() {
               };
               lastParentItem.children.push(newList);
               
-              // Push new list context for children of this item
+              // Pop deeper contexts, then push a context for this nesting level
+              while (listStack.length > targetListIndex + 1) {
+                listStack.pop();
+              }
               listStack.push({
                 type: newListType,
                 items: [newList],
@@ -606,11 +580,8 @@ export default function HomePage() {
               });
             }
           }
-          
-          lastListContext = null;
         } else {
           // Not a list item
-          lastListContext = null;
           // Only flush lists if we have content
           if (trimmed) {
             const processedContent = processInlineMarkdown(trimmed);
