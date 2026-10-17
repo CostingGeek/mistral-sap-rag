@@ -1,0 +1,28 @@
+{
+  "name": "sap-fit-gap-rag-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SAP Fit-Gap RAG Web Application",
+  "scripts": {
+    "install:all": "cd backend && pip install -r requirements.txt && cd ../frontend && npm install",
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "lint:backend": "cd backend && python -m black --check . && python -m isort --check .",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint": "npm run lint:backend && npm run lint:frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "sap",
+    "fit-gap",
+    "rag",
+    "mistral",
+    "ai"
+  ],
+  "author": "Mistral AI",
+  "license": "MIT"
+}
