@@ -167,22 +167,22 @@ export default function HomePage() {
       const numbers = orderedItems.map(i => i.number).filter((n): n is number => n !== undefined);
       const start = numbers.length > 0 ? Math.min(...numbers) : undefined;
       return (
-        <ol key={keyPrefix} className="list-decimal list-inside pl-6 space-y-2" start={start}>
+        <ol key={keyPrefix} className="list-decimal list-inside pl-4 space-y-1" start={start}>
           {orderedItems.map((item, idx) => (
-            <li key={`${keyPrefix}-item-${idx}`} className="mb-2">
+            <li key={`${keyPrefix}-item-${idx}`} className="mb-1">
               {item.content}
-              {item.children.length > 0 && <div className="ml-6">{renderListTree(item.children, `${keyPrefix}-${idx}`)}</div>}
+              {item.children.length > 0 && renderListTree(item.children, `${keyPrefix}-${idx}`)}
             </li>
           ))}
         </ol>
       );
     } else if (unorderedItems.length > 0) {
       return (
-        <ul key={keyPrefix} className="list-disc list-inside pl-6 space-y-2">
+        <ul key={keyPrefix} className="list-disc list-inside pl-6 space-y-1">
           {unorderedItems.map((item, idx) => (
-            <li key={`${keyPrefix}-item-${idx}`} className="mb-2">
+            <li key={`${keyPrefix}-item-${idx}`} className="mb-1">
               {item.content}
-              {item.children.length > 0 && <div className="ml-6">{renderListTree(item.children, `${keyPrefix}-${idx}`)}</div>}
+              {item.children.length > 0 && renderListTree(item.children, `${keyPrefix}-${idx}`)}
             </li>
           ))}
         </ul>
