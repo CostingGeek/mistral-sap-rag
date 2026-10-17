@@ -197,7 +197,7 @@ export default function HomePage() {
     const result: string[] = [];
     let inOrderedList = false;
     let lastOrderedNumber = 0;
-    let currentOrderedIndent = '';
+    let hasBulletAfterOrdered = false;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -216,9 +216,9 @@ export default function HomePage() {
           // New ordered list or gap in sequence
           inOrderedList = true;
           lastOrderedNumber = number;
+          hasBulletAfterOrdered = false;
         }
         
-        currentOrderedIndent = line.substring(0, line.length - trimmed.length);
         result.push(line);
       } else {
         // Check if this is an unordered list item
@@ -228,19 +228,31 @@ export default function HomePage() {
           // This bullet should be nested under the last ordered item
           // Remove any existing indentation and add exactly 2 spaces
           result.push('  ' + trimmed);
+          hasBulletAfterOrdered = true;
+        } else if (hasBulletAfterOrdered && trimmed && !unorderedMatch) {
+          // If we had a bullet after ordered and now we have a non-bullet, non-empty line,
+          // check if it's a source reference that should be part of the previous bullet
+          // Lines like "Source: Source 1, Source 2" or "Source 1" or "Relevant IMG Activities: ..."
+          if (/^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed) ||
+              /^Source[\s\u2013-]*.*\d+/.test(trimmed) ||
+              /^[A-Z].*Activity.*:.*/.test(trimmed)) {
+            // This is a source reference - it should be part of the previous bullet
+            // Don't add it as a new bullet, but as a continuation
+            result.push('  ' + trimmed);
+          } else {
+            result.push(line);
+          }
         } else {
           // Not a list item - keep as is
           result.push(line);
           
-          // Check if this line breaks the ordered list context
-          if (trimmed && !unorderedMatch) {
-            // Non-list content - check if it contains list-like text
-            // For example: "Relevant IMG Activities:" should break the list
-            if (/^[A-Z][a-zA-Z ]+:.*Source \d+$/.test(trimmed) ||
-                /^Source \d+:/.test(trimmed) ||
-                /^[A-Z].*:$/.test(trimmed)) {
-              // This might be a header for sources - end ordered list context
-              inOrderedList = false;
+          // If this is a non-empty, non-list line, it might break the context
+          if (trimmed && !unorderedMatch && !orderedMatch) {
+            // Check if this line breaks the ordered list context
+            // Empty lines don't break it, but certain patterns might
+            if (!/^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed) &&
+                !/^Source[\s\u2013-]*.*\d+/.test(trimmed)) {
+              // Keep inOrderedList true for now
             }
           }
         }
