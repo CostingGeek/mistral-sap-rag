@@ -17,7 +17,8 @@ This document describes the simplified SAP RAG Chat Application, built to provid
 
 - `backend/main.py` - FastAPI application with endpoints:
   - `/api/chat` - Chat with agentic retrieval
-  - `/api/object/{id}` - Get SAP object info
+  - `/api/object/{id}` - Get SAP object info (supports IDs containing slashes, e.g. `SIMG/SEHS/DG_020`)
+  - `/api/object/{id}/graph` - Get related-objects graph
   - `/api/decisions/{id}` - Decision management
   - `/api/health` - Health check
 

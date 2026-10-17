@@ -139,7 +139,8 @@ Example questions:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/chat` | Send chat message |
-| GET | `/api/object/{id}` | Get SAP object info |
+| GET | `/api/object/{id}` | Get SAP object info. `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
+| GET | `/api/object/{id}/graph` | Get related-objects graph for an object |
 | GET | `/api/decisions/{id}` | Get session decisions |
 | PATCH | `/api/decisions/{id}` | Update decision |
 | GET | `/api/health` | Health check |
