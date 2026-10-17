@@ -144,12 +144,52 @@ export default function HomePage() {
         }}
       >
         {citation.object_id}
-      </button>) - {citation.section_type}
+      </button>)
       <div className="text-xs mt-1 opacity-70">
         Similarity: {(1 - citation.distance).toFixed(3)}
       </div>
     </div>
   );
+
+  // Helper to render nested list items
+  interface ListItemNode {
+    type: 'ordered' | 'unordered';
+    number?: number;
+    content: React.ReactNode;
+    children: ListItemNode[];
+  }
+
+  const renderListTree = (items: ListItemNode[], keyPrefix: string = ''): React.ReactNode => {
+    const orderedItems = items.filter(i => i.type === 'ordered');
+    const unorderedItems = items.filter(i => i.type === 'unordered');
+    
+    if (orderedItems.length > 0 && unorderedItems.length === 0) {
+      const numbers = orderedItems.map(i => i.number).filter((n): n is number => n !== undefined);
+      const start = numbers.length > 0 ? Math.min(...numbers) : undefined;
+      return (
+        <ol key={keyPrefix} className="list-decimal list-inside pl-6 space-y-2" start={start}>
+          {orderedItems.map((item, idx) => (
+            <li key={`${keyPrefix}-item-${idx}`} className="mb-2">
+              {item.content}
+              {item.children.length > 0 && <div className="ml-6">{renderListTree(item.children, `${keyPrefix}-${idx}`)}</div>}
+            </li>
+          ))}
+        </ol>
+      );
+    } else if (unorderedItems.length > 0) {
+      return (
+        <ul key={keyPrefix} className="list-disc list-inside pl-6 space-y-2">
+          {unorderedItems.map((item, idx) => (
+            <li key={`${keyPrefix}-item-${idx}`} className="mb-2">
+              {item.content}
+              {item.children.length > 0 && <div className="ml-6">{renderListTree(item.children, `${keyPrefix}-${idx}`)}</div>}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    return null;
+  };
 
   // Markdown to React element renderer
   const renderMarkdown = (text: string): React.ReactNode => {
@@ -158,12 +198,15 @@ export default function HomePage() {
     // Split by lines and process each line
     const lines = text.split('\n');
     const elements: React.ReactNode[] = [];
-    let inList = false;
-    let listItems: {number?: number, content: React.ReactNode}[] = [];
-    let currentListType: 'ordered' | 'unordered' | null = null;
-    let currentListIndent = '';
-    let parentListType: 'ordered' | 'unordered' | null = null;
-    let parentListIndent = '';
+    
+    // List stack: each entry contains list items and their type
+    type ListContext = {
+      type: 'ordered' | 'unordered';
+      items: ListItemNode[];
+      indent: string;
+    };
+    
+    const listStack: ListContext[] = [];
     let inTable = false;
     let inTableHeader = true;
     let tableRows: React.ReactNode[] = [];
@@ -172,35 +215,24 @@ export default function HomePage() {
     let inCodeBlock = false;
     let codeBlockContent: string[] = [];
     let blankLineCount = 0;
-    let lastWasList = false;
+    let lastListContext: ListContext | null = null;
 
-    const flushList = () => {
-      if (listItems.length > 0) {
-        if (currentListType === 'ordered') {
-          // For ordered lists, find the minimum number to use as start
-          const numbers = listItems.map(item => item.number).filter((n): n is number => n !== undefined);
-          const start = numbers.length > 0 ? Math.min(...numbers) : undefined;
-          const olProps: any = { key: elements.length, className: "list-decimal list-inside pl-6 space-y-2" };
-          if (start !== undefined) {
-            olProps.start = start;
-          }
-          elements.push(<ol {...olProps}>{listItems.map(item => item.content)}</ol>);
-        } else {
-          elements.push(<ul key={elements.length} className="list-disc list-inside pl-6 space-y-2">{listItems.map(item => item.content)}</ul>);
+    const flushLists = () => {
+      // Render all lists in the stack from root to deepest
+      if (listStack.length > 0) {
+        // Get the root list
+        const rootList = listStack[0];
+        elements.push(renderListTree(rootList.items, `list-${elements.length}`));
+        // Clear the stack
+        while (listStack.length > 0) {
+          listStack.pop();
         }
-        listItems = [];
-        currentListType = null;
-        currentListIndent = '';
       }
-      inList = false;
-      // Also clear parent list tracking when flushing
-      parentListType = null;
-      parentListIndent = '';
     };
 
     const flushTable = () => {
       if (tableRows.length > 0) {
-        elements.push(<table key={elements.length} className="w-full border-collapse my-4 text-sm">
+        elements.push(<table key={elements.length} className="w-full border-collapse my-4 text-sm bg-white">
           {headerRows.length > 0 ? (
             <thead className="bg-gray-50">
               {headerRows}
@@ -239,13 +271,16 @@ export default function HomePage() {
 
       // Reset blank line tracking for non-empty lines
       if (blankLineCount > 0) {
-        lastWasList = inList;
+        // Remember we were in a list before blank lines
+        if (listStack.length > 0) {
+          lastListContext = listStack[listStack.length - 1];
+        }
         blankLineCount = 0;
       }
 
       // Check for code block (lines starting with ```)
       if (trimmed.startsWith('```')) {
-        flushList();
+        flushLists();
         flushTable();
         if (inCodeBlock) {
           // Closing code block
@@ -265,7 +300,7 @@ export default function HomePage() {
 
       // Check for horizontal rule (--- or ===)
       if (/^[-=]{3,}$/.test(trimmed)) {
-        flushList();
+        flushLists();
         flushTable();
         elements.push(<hr key={elements.length} className="my-6 border-t border-gray-300" />);
         continue;
@@ -274,12 +309,22 @@ export default function HomePage() {
       // Check for headers (lines starting with #)
       const headerMatch = trimmed.match(/^(#{1,6})\s+(.*)/);
       if (headerMatch) {
-        flushList();
+        flushLists();
         flushTable();
-        const level = headerMatch[1].length;
+        const level = Math.min(headerMatch[1].length, 6);
         const content = headerMatch[2];
-        const HeaderTag = `h${Math.min(level, 6)}` as const;
-        elements.push(<HeaderTag key={elements.length} className={`text-h${Math.min(level, 6)} font-bold mb-4 mt-6`}>{processInlineMarkdown(content)}</HeaderTag>);
+        const processedContent = processInlineMarkdown(content);
+        const className = `text-h${level} font-bold mb-4 mt-6`;
+        
+        // Use a switch to handle the dynamic header tag
+        switch (level) {
+          case 1: elements.push(<h1 key={elements.length} className={className}>{processedContent}</h1>); break;
+          case 2: elements.push(<h2 key={elements.length} className={className}>{processedContent}</h2>); break;
+          case 3: elements.push(<h3 key={elements.length} className={className}>{processedContent}</h3>); break;
+          case 4: elements.push(<h4 key={elements.length} className={className}>{processedContent}</h4>); break;
+          case 5: elements.push(<h5 key={elements.length} className={className}>{processedContent}</h5>); break;
+          case 6: elements.push(<h6 key={elements.length} className={className}>{processedContent}</h6>); break;
+        }
         continue;
       }
 
@@ -287,7 +332,7 @@ export default function HomePage() {
       const isTableRow = trimmed.startsWith('|') && trimmed.includes('|');
       
       if (isTableRow) {
-        flushList();
+        flushLists();
         if (!inTable) {
           flushTable();
           inTable = true;
@@ -329,7 +374,7 @@ export default function HomePage() {
         // Check for ordered list items (e.g., "1. " or "2)" or indented "   1. ")
         const orderedMatch = trimmed.match(/^(\s*)(\d+)\.\s+(.*)/) || trimmed.match(/^(\s*)(\d+)\)\s+(.*)/);
         // Check for unordered list items (e.g., "- " or "* " or indented "   - ")
-        const unorderedMatch = trimmed.match(/^(\s*)[-*•]\s+(.*)/);
+        const unorderedMatch = trimmed.match(/^(\s*)[-*\u2022]\s+(.*)/);
 
         if (orderedMatch || unorderedMatch) {
           const isOrdered = !!orderedMatch;
@@ -337,86 +382,123 @@ export default function HomePage() {
           const indent = isOrdered && orderedMatch ? orderedMatch[1] : unorderedMatch ? unorderedMatch[1] : '';
           const newListType = isOrdered ? 'ordered' : 'unordered';
           const listNumber = isOrdered && orderedMatch ? parseInt(orderedMatch[2], 10) : undefined;
-
-          // Reset blank line tracking when we see a list item
-          blankLineCount = 0;
-
-          if (!inList) {
-            // If we had a list before blank lines, check if we can continue it
-            if (lastWasList) {
-              // Check if this matches the parent list type and has same or less indentation
-              if (parentListType === newListType && indent.length <= parentListIndent.length) {
-                // Return to parent list
-                currentListType = parentListType;
-                currentListIndent = parentListIndent;
-                parentListType = null;
-                parentListIndent = '';
-                inList = true;
-              } else if (currentListType === newListType) {
-                // Continue the same list
-                inList = true;
-              } else {
-                // Start a new list
-                flushList();
-                currentListType = newListType;
-                currentListIndent = indent;
-                inList = true;
-              }
-            } else {
-              // Start a new list
-              flushList();
-              currentListType = newListType;
-              currentListIndent = indent;
-              inList = true;
-            }
-          } else if (currentListType !== newListType) {
-            // Type changed - check if this is a nested list or a parent list
-            if (indent.length > currentListIndent.length) {
-              // This is a nested list - remember current as parent
-              parentListType = currentListType;
-              parentListIndent = currentListIndent;
-              flushList();
-              currentListType = newListType;
-              currentListIndent = indent;
-            } else if (indent.length <= currentListIndent.length) {
-              // This is same or less indentation - check if it matches parent
-              flushList();
-              if (parentListType === newListType && indent.length <= parentListIndent.length) {
-                // Return to parent list
-                currentListType = parentListType;
-                currentListIndent = parentListIndent;
-                parentListType = null;
-                parentListIndent = '';
-              } else {
-                // Start new list at this level
-                currentListType = newListType;
-                currentListIndent = indent;
-              }
-            } else {
-              // Same indentation, different type - start new list
-              flushList();
-              currentListType = newListType;
-              currentListIndent = indent;
-            }
-          } else if (indent.length !== currentListIndent.length) {
-            // Same type but different indentation - this shouldn't happen in valid markdown
-            // but handle it gracefully
-            flushList();
-            currentListType = newListType;
-            currentListIndent = indent;
-          }
-
-          // Process the content for inline markdown
           const processedContent = processInlineMarkdown(content);
-          listItems.push({ number: listNumber, content: <li key={listItems.length} className={indent ? 'ml-6' : ''}>{processedContent}</li> });
-        } else {
-          // Only flush list if we're not in a list with blank lines
-          if (!lastWasList || blankLineCount === 0) {
-            flushList();
+
+          // Determine the current indentation level
+          const currentIndentLevel = indent.length;
+          
+          // Find the appropriate list in the stack
+          let targetListIndex = listStack.length - 1;
+          
+          // If we have a lastListContext from blank lines, use it
+          if (lastListContext && currentIndentLevel <= lastListContext.indent.length) {
+            targetListIndex = listStack.findIndex(l => l === lastListContext);
           }
-          lastWasList = false;
-          blankLineCount = 0;
-          // Process as paragraph with inline markdown
+          
+          // Find the deepest list with indentation <= current
+          while (targetListIndex >= 0 && listStack[targetListIndex].indent.length > currentIndentLevel) {
+            targetListIndex--;
+          }
+          
+          if (targetListIndex >= 0 && listStack[targetListIndex].type === newListType) {
+            // Same type and appropriate indentation - add to this list
+            const listItem: ListItemNode = {
+              type: newListType,
+              number: listNumber,
+              content: processedContent,
+              children: []
+            };
+            listStack[targetListIndex].items.push(listItem);
+            
+            // If we're adding to a deeper list, pop shallower lists from stack
+            while (listStack.length > targetListIndex + 1) {
+              listStack.pop();
+            }
+            
+            // Push new list context for potential children
+            listStack.push({
+              type: newListType,
+              items: [],
+              indent: indent
+            });
+          } else {
+            // Different type - check if we should resume a parent list of the same type
+            // For ordered lists, check if there's an ordered list at a higher level
+            let parentOfSameTypeIndex = -1;
+            if (newListType === 'ordered') {
+              // Look for an ordered list in the stack
+              for (let i = 0; i < listStack.length; i++) {
+                if (listStack[i].type === 'ordered' && listStack[i].indent.length <= currentIndentLevel) {
+                  parentOfSameTypeIndex = i;
+                  break;
+                }
+              }
+            }
+            
+            if (parentOfSameTypeIndex >= 0) {
+              // Resume the parent list of the same type
+              const parentList = listStack[parentOfSameTypeIndex];
+              const listItem: ListItemNode = {
+                type: newListType,
+                number: listNumber,
+                content: processedContent,
+                children: []
+              };
+              parentList.items.push(listItem);
+              
+              // Pop everything above the parent list
+              while (listStack.length > parentOfSameTypeIndex + 1) {
+                listStack.pop();
+              }
+              
+              // Push new list context for potential children
+              listStack.push({
+                type: newListType,
+                items: [],
+                indent: indent
+              });
+            } else if (targetListIndex >= 0 && listStack[targetListIndex].items.length > 0) {
+              // We have a parent list - add as nested child to last item
+              const parentList = listStack[targetListIndex];
+              const lastParentItem = parentList.items[parentList.items.length - 1];
+              
+              // Create new nested list context
+              const newList: ListItemNode = {
+                type: newListType,
+                number: listNumber,
+                content: processedContent,
+                children: []
+              };
+              lastParentItem.children.push(newList);
+              
+              // Push new list context for children of this item
+              listStack.push({
+                type: newListType,
+                items: [newList],
+                indent: indent
+              });
+            } else {
+              // No parent list or empty parent - start fresh
+              flushLists();
+              const listItem: ListItemNode = {
+                type: newListType,
+                number: listNumber,
+                content: processedContent,
+                children: []
+              };
+              listStack.push({
+                type: newListType,
+                items: [listItem],
+                indent: indent
+              });
+            }
+          }
+          
+          lastListContext = null;
+        } else {
+          // Not a list item
+          lastListContext = null;
+          // Only flush lists if we have content
           if (trimmed) {
             const processedContent = processInlineMarkdown(trimmed);
             elements.push(<p key={elements.length} className="mb-4">{processedContent}</p>);
@@ -425,7 +507,7 @@ export default function HomePage() {
       }
     }
 
-    flushList();
+    flushLists();
     flushTable();
     flushCodeBlock();
     return <>{elements}</>;
