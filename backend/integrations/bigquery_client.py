@@ -333,21 +333,24 @@ class BigQueryClient:
         Returns:
             Graph data with nodes and edges
         """
-        # Get the object's references
+        # Get the object's references aggregated across ALL of its chunks —
+        # refs are distributed per section (PRECONDITIONS, ACTIVITY, ...), so
+        # any single row would carry only a subset
         sql = f"""
-            SELECT element_refs
-            FROM ({self._union(self._clean_tables(scope), "element_refs")})
-            WHERE object_id = @object_id
-            LIMIT 1
+            SELECT r AS ref
+            FROM ({self._union(self._clean_tables(scope), "object_id, element_refs")}) AS c,
+                 UNNEST(c.element_refs) AS r
+            WHERE c.object_id = @object_id
+            GROUP BY 1
         """
         
         params = [bigquery.ScalarQueryParameter("object_id", "STRING", object_id)]
         results = self.query(sql, params)
         
-        if not results or not results[0]["element_refs"]:
+        if not results:
             return {"nodes": [], "edges": []}
         
-        refs = results[0]["element_refs"]
+        refs = [row["ref"] for row in results]
         
         # Extract activity references
         activity_refs = [r.replace("activity:", "") for r in refs if r.startswith("activity:")]
