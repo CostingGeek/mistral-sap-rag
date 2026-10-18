@@ -64,15 +64,6 @@ export const useApi = () => {
       request<any>('GET', `/object/${encodeURIComponent(objectId)}/graph`)
     , []),
 
-    // Decisions
-    getDecisions: useCallback((sessionId: string) =>
-      request<any[]>('GET', `/decisions/${sessionId}`)
-    , []),
-
-    updateDecision: useCallback((decisionId: string, data: { status?: string; answer?: string }) =>
-      request<any>('PATCH', `/decisions/${decisionId}`, data)
-    , []),
-
     // Health
     healthCheck: useCallback(() =>
       request<any>('GET', '/health')

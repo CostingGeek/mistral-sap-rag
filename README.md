@@ -15,8 +15,8 @@ A local web application that lets users chat with SAP Customizing documentation 
 ```
 sap-rag-app/
 ├── backend/          # FastAPI (Python)
-│   ├── integrations/  # BigQuery, Mistral, GCS clients
-│   ├── services/      # Chat, PDF pipeline, decisions, etc.
+│   ├── integrations/  # BigQuery, Mistral clients
+│   ├── services/      # Agentic chat service
 │   ├── models/        # Pydantic schemas
 │   └── main.py        # FastAPI application
 │
@@ -73,13 +73,7 @@ DEBUG=true
 
 ### 3. BigQuery Tables
 
-The application will automatically create the following tables if they don't exist:
-- `sap_rag.sessions` - Analysis sessions
-- `sap_rag.requirements` - Extracted requirements
-- `sap_rag.matches` - Requirement to object matches
-- `sap_rag.decisions` - Open decisions
-
-The ingestion pipeline should have already created:
+The ingestion pipeline (see `doc/ingest_sap_documentation_doktl.ipynb`) creates the corpus tables the backend reads:
 - `sap_rag.doktl_clean` - Cleaned SAP standard documentation chunks (~137k)
 - `sap_rag.doktl_embeddings` - Embeddings for searchable chunks (~46k)
 - `sap_rag.doktl_nova_clean` - Company-standard (Project NOVA) chunks - created by setting `CORPUS = "DOKTL_NOVA"` in the ingestion notebook
@@ -144,8 +138,6 @@ Example questions:
 | POST | `/api/chat` | Send chat message (optional `scope` in body: `standard` / `nova` / `both`) |
 | GET | `/api/object/{id}` | Get SAP object info (optional `?scope=standard|nova|both`). `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
 | GET | `/api/object/{id}/graph` | Get related-objects graph for an object (optional `?scope=standard|nova|both`) |
-| GET | `/api/decisions/{id}` | Get session decisions |
-| PATCH | `/api/decisions/{id}` | Update decision |
 | GET | `/api/health` | Health check |
 
 ## Models Used
@@ -153,8 +145,6 @@ Example questions:
 All Mistral models:
 - **Embeddings**: `mistral-embed` (1024 dims)
 - **Chat & Analysis**: `mistral-medium-latest`
-- **OCR**: Mistral OCR API (with pypdf fallback)
-- **ASR**: Mistral Voxtral (for audio transcription)
 
 ## Data Flow
 
@@ -190,7 +180,6 @@ sap-rag-app/
 │   ├── integrations/
 │   │   ├── __init__.py
 │   │   ├── bigquery_client.py  # BigQuery operations
-│   │   ├── gcs_client.py      # GCS file operations
 │   │   └── mistral_client.py  # Mistral API client
 │   │
 │   ├── models/
@@ -199,11 +188,7 @@ sap-rag-app/
 │   │
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── chat_service.py      # Agentic chat
-│   │   ├── decision_service.py # Decision management
-│   │   ├── pdf_pipeline.py      # PDF processing
-│   │   ├── requirement_service.py # Requirement extraction
-│   │   └── verdict_service.py  # Fit-gap verdicts
+│   │   └── chat_service.py      # Agentic chat
 │   │
 │   └── requirements.txt
 │
@@ -232,7 +217,6 @@ sap-rag-app/
         │
         └── views/
             ├── HomePage.tsx
-            ├── DecisionsPage.tsx
             └── ObjectPage.tsx
 ```
 
@@ -259,9 +243,7 @@ For production deployment:
 
 | Risk | Mitigation |
 |------|------------|
-| Hallucination prevention | Verdicts are decided by the LLM on retrieved content; the similarity threshold (0.4) is only a coarse no-results guard — golden-set calibration shows match/no-match distance bands overlap, so distance is never treated as confidence |
-| OCR garbles tables | OCR extraction prompt tolerant to noise |
-| OCR API unavailable | pypdf fallback for local PDF text extraction |
+| Hallucination prevention | Answers are grounded in retrieved chunks and must cite them; golden-set calibration shows true-match and negative distance bands overlap, so distance is never treated as confidence |
 | Mistral API returns malformed data | Type validation with regex JSON extraction fallback |
 
 ## License

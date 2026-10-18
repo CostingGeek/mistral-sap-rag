@@ -1,4 +1,4 @@
-# Makefile for SAP Fit-Gap RAG Application
+# Makefile for SAP RAG Chat Application
 
 .PHONY: help install dev run lint test clean
 
@@ -52,4 +52,3 @@ clean:
 	rm -rf $(FRONTEND_DIR)/node_modules
 	rm -rf $(FRONTEND_DIR)/dist
 	rm -rf $(FRONTEND_DIR)/.vite
-	rm -rf uploads/

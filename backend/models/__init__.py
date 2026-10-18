@@ -3,16 +3,7 @@ from .schemas import (
     ChatRequest,
     ChatResponse,
     ChunkInfo,
-    Decision,
-    DecisionStatus,
-    FitGapResult,
-    Match,
     ObjectInfo,
-    Requirement,
-    Session,
-    SessionKind,
-    SessionStatus,
-    Verdict,
 )
 
 __all__ = [
@@ -20,14 +11,5 @@ __all__ = [
     "ChatRequest",
     "ChatResponse",
     "ChunkInfo",
-    "Decision",
-    "DecisionStatus",
-    "FitGapResult",
-    "Match",
     "ObjectInfo",
-    "Requirement",
-    "Session",
-    "SessionKind",
-    "SessionStatus",
-    "Verdict",
 ]

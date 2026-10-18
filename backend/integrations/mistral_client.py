@@ -1,12 +1,10 @@
 """
-Mistral AI client for embeddings, chat, OCR, and ASR.
+Mistral AI client for embeddings and chat.
 """
-import base64
 import json
 import logging
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 class MistralClient:
     """
     Client for Mistral AI APIs.
-    Handles embeddings, chat completion, OCR, and ASR (Voxtral).
+    Handles embeddings and chat completion.
     """
     
     BASE_URL = "https://api.mistral.ai/v1"
@@ -223,148 +221,6 @@ class MistralClient:
         data.update(kwargs)
         
         return self._request("POST", "/chat/completions", data, stream=stream)
-    
-    # -------------------------------------------------------------------------
-    # OCR (Mistral OCR API)
-    # -------------------------------------------------------------------------
-    
-    def ocr_document(
-        self,
-        file_path: Union[str, Path],
-        language: str = "en"
-    ) -> str:
-        """
-        Perform OCR on a document image or PDF.
-        
-        Args:
-            file_path: Path to the file
-            language: Language of the text
-        
-        Returns:
-            Extracted text
-        """
-        with open(file_path, "rb") as f:
-            file_content = f.read()
-        
-        files = {
-            "file": (Path(file_path).name, file_content, "application/pdf"),
-        }
-        
-        data = {
-            "language": language,
-        }
-        
-        result = self._request("POST", "/ocr", data, files=files)
-        
-        if "text" in result:
-            return result["text"]
-        elif "choices" in result and len(result["choices"]) > 0:
-            return result["choices"][0]["text"]
-        else:
-            raise ValueError(f"Unexpected OCR response format: {result}")
-    
-    def ocr_document_bytes(
-        self,
-        file_content: bytes,
-        file_name: str,
-        language: str = "en"
-    ) -> str:
-        """
-        Perform OCR on document bytes.
-        
-        Args:
-            file_content: File content as bytes
-            file_name: Name of the file
-            language: Language of the text
-        
-        Returns:
-            Extracted text
-        """
-        files = {
-            "file": (file_name, file_content, "application/pdf"),
-        }
-        
-        data = {
-            "language": language,
-        }
-        
-        result = self._request("POST", "/ocr", data, files=files)
-        
-        if "text" in result:
-            return result["text"]
-        elif "choices" in result and len(result["choices"]) > 0:
-            return result["choices"][0]["text"]
-        else:
-            raise ValueError(f"Unexpected OCR response format: {result}")
-    
-    # -------------------------------------------------------------------------
-    # ASR (Voxtral Speech-to-Text)
-    # -------------------------------------------------------------------------
-    
-    def transcribe_audio(
-        self,
-        file_path: Union[str, Path],
-        language: str = "en",
-        diarization: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Transcribe audio using Voxtral ASR.
-        
-        Args:
-            file_path: Path to the audio file
-            language: Language of the audio
-            diarization: Whether to enable speaker diarization
-        
-        Returns:
-            Transcription result with diarization if enabled
-        """
-        with open(file_path, "rb") as f:
-            file_content = f.read()
-        
-        files = {
-            "file": (Path(file_path).name, file_content, "audio/mpeg"),
-        }
-        
-        data = {
-            "language": language,
-            "diarization": diarization,
-        }
-        
-        result = self._request("POST", "/audio/transcriptions", data, files=files)
-        
-        return result
-    
-    def transcribe_audio_bytes(
-        self,
-        file_content: bytes,
-        file_name: str,
-        language: str = "en",
-        diarization: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Transcribe audio bytes using Voxtral ASR.
-        
-        Args:
-            file_content: Audio content as bytes
-            file_name: Name of the file
-            language: Language of the audio
-            diarization: Whether to enable speaker diarization
-        
-        Returns:
-            Transcription result with diarization if enabled
-        """
-        files = {
-            "file": (file_name, file_content, "audio/mpeg"),
-        }
-        
-        data = {
-            "language": language,
-            "diarization": diarization,
-        }
-        
-        result = self._request("POST", "/audio/transcriptions", data, files=files)
-        
-        return result
     
     # -------------------------------------------------------------------------
     # Helper Methods

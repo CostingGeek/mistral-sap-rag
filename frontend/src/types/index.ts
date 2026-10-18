@@ -1,17 +1,3 @@
-// Session types
-export type SessionKind = 'chat' | 'pdf' | 'audio';
-export type SessionStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-export interface Session {
-  session_id: string;
-  kind: SessionKind;
-  title: string;
-  created_at: string;
-  status: SessionStatus;
-  source_ref?: string;
-  metadata?: Record<string, any>;
-}
-
 // Chat types
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -51,54 +37,6 @@ export interface ChunkInfo {
   section_type: string;
   distance: number;
   content: string;
-}
-
-// Fit-Gap types
-export type Verdict = 'fit' | 'partial' | 'gap' | 'question';
-export type DecisionStatus = 'open' | 'answered' | 'resolved';
-
-export interface Requirement {
-  req_id: string;
-  session_id: string;
-  ref_in_doc?: string;
-  text: string;
-  category?: string;
-  page?: number;
-  speaker?: string;
-  created_at: string;
-}
-
-export interface Match {
-  req_id: string;
-  session_id: string;
-  object_id: string;
-  distance: number;
-  verdict: Verdict;
-  rationale: string;
-  model: string;
-  matched_objects: string[];
-  created_at: string;
-}
-
-export interface Decision {
-  decision_id: string;
-  session_id: string;
-  req_id?: string;
-  question: string;
-  options: string[];
-  status: DecisionStatus;
-  answer?: string;
-  source: string;
-  created_at: string;
-}
-
-export interface FitGapResult {
-  session_id: string;
-  requirements: Requirement[];
-  matches: Match[];
-  decisions: Decision[];
-  summary: string;
-  stats: Record<string, any>;
 }
 
 // Graph types

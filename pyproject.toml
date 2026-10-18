@@ -1,7 +1,7 @@
 [project]
 name = "sap-rag-app"
 version = "0.2.0"
-description = "SAP Fit-Gap RAG Application: Web app for SAP consultants to query Customizing docs via RAG and run fit-gap analysis on PDFs. Includes chat with citations, requirement extraction with pypdf fallback, matching, verdicts, and decision tracking. FastAPI + React."
+description = "SAP Customizing RAG application: chat with SAP Customizing documentation via RAG, with citations and corpus scope selection. FastAPI + React."
 readme = "README.md"
 authors = [
     { name = "Julien Delvat", email = "jdelvat@gmail.com" }
@@ -13,8 +13,6 @@ dependencies = [
     "uvicorn>=0.54.0",
     "pydantic-settings>=2.0.0",
     "google-cloud-bigquery",
-    "google-cloud-storage",
-    "python-multipart",
 ]
 
 [project.scripts]
