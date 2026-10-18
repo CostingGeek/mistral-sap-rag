@@ -21,12 +21,13 @@ project facts change.
 
 ## Environment quirks (Windows / this machine)
 
-- Most repo files use CRLF line endings; `frontend/src/views/HomePage.tsx` uses
-  LF. The `edit` tool fails to match CRLF files — do programmatic edits with a
-  throwaway Node script (`node _tmp_edit.js`, then delete it), joining lines
-  with the file's actual ending. Bash heredocs containing multiline content get
-  CRLF-mangled in transport — never use them for code.
-- Verify heredoc-free edits with `grep`/`sed -n` before assuming they landed.
+- Line endings are normalized to LF repo-wide via `.gitattributes`
+  (`* text=auto eol=lf`) and `core.autocrlf` is disabled locally. Write new
+  files and edit scripts with LF joins. Do not re-enable `autocrlf` or commit
+  CRLF — it breaks the `edit` tool's string matching on this machine.
+- Bash heredocs containing multiline content get CRLF-mangled in transport —
+  never use them for code. Use throwaway Node scripts for programmatic edits,
+  and verify edits with `grep`/`sed -n` before assuming they landed.
 
 ## Domain facts
 
