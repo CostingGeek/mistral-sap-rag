@@ -7,6 +7,7 @@ export default function HomePage() {
   const { chat, getObject } = useApi();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [scope, setScope] = useState<"standard" | "nova" | "both">("both");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCitationPopup, setShowCitationPopup] = useState(false);
@@ -40,6 +41,7 @@ export default function HomePage() {
       const response = await chat({
         message: input.trim(),
         session_id: sessionId || undefined,
+        scope,
         history: messages.filter(
           (m) => m.role === "user" || m.role === "assistant",
         ),
@@ -710,6 +712,24 @@ export default function HomePage() {
 
         <div className="border-t p-4 flex-shrink-0">
           <div className="flex flex-col gap-1">
+            <div className="flex gap-2 items-center mb-2">
+              <label htmlFor="corpus-scope" className="text-xs text-gray-500">
+                Documentation scope:
+              </label>
+              <select
+                id="corpus-scope"
+                value={scope}
+                onChange={(e) =>
+                  setScope(e.target.value as "standard" | "nova" | "both")
+                }
+                className="input bg-gray-50 h-9 text-sm w-72"
+                disabled={isLoading}
+              >
+                <option value="both">SAP standard + Company standard</option>
+                <option value="standard">SAP standard only</option>
+                <option value="nova">Company standard (NOVA) only</option>
+              </select>
+            </div>
             <div className="flex gap-2 items-center">
               <input
                 type="text"

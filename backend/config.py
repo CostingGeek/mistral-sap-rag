@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # question verdicts are decided by the LLM on retrieved content.
     similarity_threshold: float = 0.4
     
+    # Corpus tables (scope selection: standard | nova | both)
+    standard_clean_table: str = "doktl_clean"
+    standard_embeddings_table: str = "doktl_embeddings"
+    nova_clean_table: str = "doktl_nova_clean"
+    nova_embeddings_table: str = "doktl_nova_embeddings"
+    
     # File Upload Configuration
     upload_dir: str = "./uploads"
     max_upload_size_mb: int = 100

@@ -41,7 +41,7 @@ export const useApi = () => {
   // Specific API methods
   const api = {
     // Chat
-    chat: useCallback((data: { message: string; session_id?: string; history?: any[] }) =>
+    chat: useCallback((data: { message: string; session_id?: string; history?: any[]; scope?: string }) =>
       request<any>('POST', '/chat', data)
     , []),
 

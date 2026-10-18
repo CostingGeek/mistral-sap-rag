@@ -5,6 +5,7 @@ A local web application that lets users chat with SAP Customizing documentation 
 ## Features
 
 - **Chat** against SAP Customizing documentation with RAG and agentic retrieval
+- **Corpus scope selection**: ask against the SAP standard (DOKTL), the company standard (DOKTL_NOVA), or both
 - Source citations with clickable references
 - Rich markdown rendering of assistant answers: nested numbered/bulleted lists, tables, code blocks, and inline styles
 - Conversation history with reset capability
@@ -79,8 +80,10 @@ The application will automatically create the following tables if they don't exi
 - `sap_rag.decisions` - Open decisions
 
 The ingestion pipeline should have already created:
-- `sap_rag.doktl_clean` - Cleaned SAP documentation chunks (~133k)
-- `sap_rag.doktl_embeddings` - Embeddings for searchable chunks (~41k)
+- `sap_rag.doktl_clean` - Cleaned SAP standard documentation chunks (~137k)
+- `sap_rag.doktl_embeddings` - Embeddings for searchable chunks (~46k)
+- `sap_rag.doktl_nova_clean` - Company-standard (Project NOVA) chunks - created by setting `CORPUS = "DOKTL_NOVA"` in the ingestion notebook
+- `sap_rag.doktl_nova_embeddings` - Embeddings for the NOVA corpus
 
 ### 4. Frontend Setup
 
@@ -138,9 +141,9 @@ Example questions:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chat` | Send chat message |
-| GET | `/api/object/{id}` | Get SAP object info. `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
-| GET | `/api/object/{id}/graph` | Get related-objects graph for an object |
+| POST | `/api/chat` | Send chat message (optional `scope` in body: `standard` / `nova` / `both`) |
+| GET | `/api/object/{id}` | Get SAP object info (optional `?scope=standard|nova|both`). `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
+| GET | `/api/object/{id}/graph` | Get related-objects graph for an object (optional `?scope=standard|nova|both`) |
 | GET | `/api/decisions/{id}` | Get session decisions |
 | PATCH | `/api/decisions/{id}` | Update decision |
 | GET | `/api/health` | Health check |

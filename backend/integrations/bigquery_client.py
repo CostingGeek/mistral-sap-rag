@@ -178,11 +178,40 @@ class BigQueryClient:
     # Retrieval Methods
     # -------------------------------------------------------------------------
     
+    # ------------------------------------------------------------------
+    # Corpus scope: standard (SAP) | nova (company standard) | both
+    # ------------------------------------------------------------------
+    VALID_SCOPES = ("standard", "nova", "both")
+
+    def _clean_tables(self, scope: str) -> List[str]:
+        """Clean-table names for a corpus scope."""
+        if scope == "nova":
+            return [settings.nova_clean_table]
+        if scope == "standard":
+            return [settings.standard_clean_table]
+        return [settings.standard_clean_table, settings.nova_clean_table]
+
+    def _embed_tables(self, scope: str) -> List[str]:
+        """Embedding-table names for a corpus scope."""
+        if scope == "nova":
+            return [settings.nova_embeddings_table]
+        if scope == "standard":
+            return [settings.standard_embeddings_table]
+        return [settings.standard_embeddings_table, settings.nova_embeddings_table]
+
+    def _union(self, tables: List[str], columns: str) -> str:
+        """UNION ALL subquery over the given corpus tables."""
+        return " UNION ALL ".join(
+            f"SELECT {columns} FROM `{settings.gcp_project}.{self.dataset_id}.{t}`"
+            for t in tables
+        )
+
     def retrieve_similar_chunks(
         self,
         query_embedding: List[float],
         top_k: int = 8,
-        section_filter: Optional[str] = None
+        section_filter: Optional[str] = None,
+        scope: str = "both"
     ) -> List[Dict[str, Any]]:
         """
         Retrieve similar chunks from the corpus using vector similarity.
@@ -217,9 +246,9 @@ class BigQueryClient:
                 SELECT 
                     chunk_id,
                     ML.DISTANCE(embedding, @q_vec) AS distance
-                FROM `{settings.gcp_project}.{self.dataset_id}.doktl_embeddings`
+                FROM ({self._union(self._embed_tables(scope), "chunk_id, embedding")})
             ) AS e
-            JOIN `{settings.gcp_project}.{self.dataset_id}.doktl_clean` AS c 
+            JOIN ({self._union(self._clean_tables(scope), "chunk_id, object_id, title, section_type, content_clean, embed")}) AS c
                 ON c.chunk_id = e.chunk_id
             WHERE c.embed = TRUE
             {section_where}
@@ -229,7 +258,7 @@ class BigQueryClient:
         
         return self.query(sql, params)
     
-    def get_object_info(self, object_id: str) -> Optional[Dict[str, Any]]:
+    def get_object_info(self, object_id: str, scope: str = "both") -> Optional[Dict[str, Any]]:
         """
         Get full information for a specific SAP object.
         
@@ -246,7 +275,7 @@ class BigQueryClient:
                 section_type,
                 content_clean AS content,
                 element_refs
-            FROM `{settings.gcp_project}.{self.dataset_id}.doktl_clean`
+            FROM ({self._union(self._clean_tables(scope), "object_id, title, section_type, content_clean, element_refs")})
             WHERE object_id = @object_id
             ORDER BY 
                 CASE section_type
@@ -293,7 +322,7 @@ class BigQueryClient:
         
         return object_info
     
-    def get_related_objects(self, object_id: str, depth: int = 1) -> Dict[str, Any]:
+    def get_related_objects(self, object_id: str, depth: int = 1, scope: str = "both") -> Dict[str, Any]:
         """
         Get objects related to the given object via element_refs.
         
@@ -307,7 +336,7 @@ class BigQueryClient:
         # Get the object's references
         sql = f"""
             SELECT element_refs
-            FROM `{settings.gcp_project}.{self.dataset_id}.doktl_clean`
+            FROM ({self._union(self._clean_tables(scope), "element_refs")})
             WHERE object_id = @object_id
             LIMIT 1
         """
@@ -330,7 +359,7 @@ class BigQueryClient:
         placeholders = ", ".join(["?" for _ in activity_refs])
         sql = f"""
             SELECT object_id, title
-            FROM `{settings.gcp_project}.{self.dataset_id}.doktl_clean`
+            FROM ({self._union(self._clean_tables(scope), "object_id, title")})
             WHERE object_id IN UNNEST(@activity_refs)
             GROUP BY object_id, title
         """

@@ -112,6 +112,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="User message")
     history: Optional[List[ChatMessage]] = Field(None, description="Previous messages in conversation")
     top_k: Optional[int] = Field(None, description="Number of chunks to retrieve")
+    scope: Optional[str] = Field("both", description="Corpus scope: standard (SAP), nova (company), or both")
 
 
 class ChunkInfo(BaseModel):

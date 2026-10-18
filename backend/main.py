@@ -387,16 +387,16 @@ Open Decisions: {len(decisions)}
 # :path converter is greedy and would otherwise also capture "/graph" suffixes.
 
 @app.get("/api/object/{object_id:path}/graph")
-def get_object_graph(object_id: str):
+def get_object_graph(object_id: str, scope: str = "both"):
     """Get graph data (nodes and edges) for an object."""
-    graph = bq_client.get_related_objects(object_id, depth=1)
+    graph = bq_client.get_related_objects(object_id, depth=1, scope=scope)
     return graph
 
 
 @app.get("/api/object/{object_id:path}")
-def get_object(object_id: str):
+def get_object(object_id: str, scope: str = "both"):
     """Get full information for an SAP object."""
-    obj_info = bq_client.get_object_info(object_id)
+    obj_info = bq_client.get_object_info(object_id, scope=scope)
     if not obj_info:
         raise HTTPException(status_code=404, detail="Object not found")
     

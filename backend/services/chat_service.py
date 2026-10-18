@@ -76,7 +76,8 @@ Return only the JSON object, no other text.
         self,
         query: str,
         top_k: int = None,
-        section_filter: Optional[str] = None
+        section_filter: Optional[str] = None,
+        scope: str = "both"
     ) -> List[ChunkInfo]:
         """
         Retrieve relevant chunks for a query.
@@ -98,7 +99,8 @@ Return only the JSON object, no other text.
         results = self.bq_client.retrieve_similar_chunks(
             embedding,
             top_k=top_k,
-            section_filter=section_filter
+            section_filter=section_filter,
+            scope=scope
         )
         
         return [
@@ -116,7 +118,8 @@ Return only the JSON object, no other text.
     def expand_graph(
         self,
         chunks: List[ChunkInfo],
-        hops: int = 1
+        hops: int = 1,
+        scope: str = "both"
     ) -> Tuple[List[ChunkInfo], List[Dict[str, Any]]]:
         """
         Expand the retrieval by following graph edges (element_refs).
@@ -135,7 +138,7 @@ Return only the JSON object, no other text.
         for hop in range(hops):
             # Get references for each object
             for object_id in object_ids:
-                graph = self.bq_client.get_related_objects(object_id, depth=1)
+                graph = self.bq_client.get_related_objects(object_id, depth=1, scope=scope)
                 
                 for edge in graph["edges"]:
                     edges.append(edge)
@@ -143,9 +146,10 @@ Return only the JSON object, no other text.
                     # Get chunks for the related object
                     if edge["target"] not in object_ids:
                         obj_id = edge["target"]
-                        if obj_id not in self._object_info_cache:
-                            self._object_info_cache[obj_id] = self.bq_client.get_object_info(obj_id)
-                        obj_info = self._object_info_cache[obj_id]
+                        cache_key = f"{scope}:{obj_id}"
+                        if cache_key not in self._object_info_cache:
+                            self._object_info_cache[cache_key] = self.bq_client.get_object_info(obj_id, scope=scope)
+                        obj_info = self._object_info_cache[cache_key]
                         if obj_info and obj_info.get("sections"):
                             # Create chunks for USE and SHORTTEXT sections
                             for section_type, content in obj_info["sections"].items():
@@ -279,6 +283,9 @@ Now answer the user's question.
         query = request.message
         top_k = request.top_k or settings.retrieval_k
         history = request.history or []
+        scope = request.scope or "both"
+        if scope not in self.bq_client.VALID_SCOPES:
+            raise ValueError(f"Invalid scope: {scope}. Must be one of {self.bq_client.VALID_SCOPES}")
         
         # Step 1: Intent classification
         intent = self.classify_intent(query)
@@ -294,7 +301,7 @@ Now answer the user's question.
         # Step 3: Retrieve chunks for each query
         all_chunks = []
         for q in queries:
-            chunks = self.retrieve_chunks(q, top_k=top_k // len(queries))
+            chunks = self.retrieve_chunks(q, top_k=top_k // len(queries), scope=scope)
             all_chunks.extend(chunks)
             trace.append({
                 "step": "retrieval",
@@ -313,7 +320,7 @@ Now answer the user's question.
         all_chunks = unique_chunks
         
         # Step 4: Graph expansion
-        expanded_chunks, edges = self.expand_graph(all_chunks, hops=1)
+        expanded_chunks, edges = self.expand_graph(all_chunks, hops=1, scope=scope)
         trace.append({
             "step": "graph_expansion",
             "original_count": len(all_chunks),

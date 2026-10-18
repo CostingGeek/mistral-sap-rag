@@ -32,6 +32,7 @@ export interface ChatRequest {
   message: string;
   history?: ChatMessage[];
   top_k?: number;
+  scope?: "standard" | "nova" | "both";
 }
 
 export interface ChatResponse {
