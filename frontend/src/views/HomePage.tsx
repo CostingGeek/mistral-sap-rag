@@ -626,8 +626,12 @@ export default function HomePage() {
   const processInlineMarkdown = (text: string): React.ReactNode => {
     if (!text) return text;
 
-    // Clean up markdown link syntax [text](url) -> text, and [Source X] -> Source X
-    let cleanedText = text.replace(/\[([^\]]+)\](\([^\)]+\))?/g, '$1'); // [text](url) -> text, [Source X] -> Source X
+    // Clean up markdown link syntax [text](url) -> text, and [Source X] -> Source X.
+    // Runs of adjacent markers (e.g. [Source 1][Source 2]) are joined with spaces
+    // so they do not collapse into "Source 1Source 2".
+    let cleanedText = text.replace(/(?:\[[^\]]+\](?:\([^\)]+\))?)+/g, (run) =>
+      (run.match(/\[([^\]]+)\]/g) || []).map((m) => m.slice(1, -1)).join(' ')
+    ); // [text](url) -> text, [Source X] -> Source X
 
     // Process inline code first (backticks)
     const codeParts = cleanedText.split(/(`[^`\n]+`)/);

@@ -108,7 +108,7 @@ export default function ObjectPage() {
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Documentation</h2>
             <div className="space-y-4">
-              {Object.entries(objectInfo.sections || {}).map(([sectionType, content]) => (
+              {Object.entries<string>(objectInfo.sections || {}).map(([sectionType, content]) => (
                 <div key={sectionType} className="border-b border-gray-200 pb-4 last:border-0">
                   <h3 className="font-medium text-gray-700 mb-2">
                     {sectionType}
@@ -128,7 +128,7 @@ export default function ObjectPage() {
             <h2 className="text-lg font-semibold mb-4">Related Objects</h2>
             {graphData?.nodes?.length ? (
               <div className="space-y-3">
-                {graphData.nodes.map((node: any, index: number) => (
+                {graphData.nodes.map((node: any) => (
                   <div
                     key={node.id}
                     className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
