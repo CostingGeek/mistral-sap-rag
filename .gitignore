@@ -90,5 +90,9 @@ Thumbs.db
 .env.local
 .env.*.local
 service-account.json
+
 # Vibe CLI local config
 .vibe/
+
+# Source files
+*.csv.gz

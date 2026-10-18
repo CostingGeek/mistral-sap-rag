@@ -256,6 +256,9 @@ class BigQueryClient:
                     WHEN 'STANDARD_SETUP' THEN 4
                     WHEN 'ACTIVITY' THEN 5
                     WHEN 'EXAMPLE' THEN 6
+                    WHEN 'ADDITIONAL_HINTS' THEN 7
+                    WHEN 'SEE_ALSO' THEN 8
+                    WHEN 'FURTHER_SOURCES_OF_INF' THEN 9
                     ELSE 100
                 END
         """
