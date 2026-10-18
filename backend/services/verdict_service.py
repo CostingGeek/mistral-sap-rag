@@ -174,6 +174,11 @@ Based on the evidence, classify this requirement as one of:
 - "gap": The requirement is NOT covered by standard Customizing
 - "question": Cannot determine from available evidence
 
+Rules for coverage:
+- A requirement is covered ONLY if the evidence describes Customizing settings whose PURPOSE matches the requirement's stated goal
+- Config-adjacent evidence (similar vocabulary, different purpose) does not make a requirement covered
+- If nothing in the evidence would let the user achieve the goal through SAP Customizing, the verdict is "gap"
+
 Additionally:
 - If the verdict is "partial" or "question", identify any open questions that need workshop discussion
 - If there are scope ambiguities (e.g., country scope, deployment type), flag a decision
