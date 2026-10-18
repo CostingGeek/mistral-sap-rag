@@ -96,5 +96,7 @@ service-account.json
 
 # Source files
 *.csv.gz
-# Project data and notebooks stay local
-doc/
+# Project data stays local; the ingestion notebook is tracked
+doc/*.csv
+doc/*.gz
+doc/desktop.ini
