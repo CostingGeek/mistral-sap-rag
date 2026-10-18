@@ -2,6 +2,15 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useApi } from "../hooks/useApi";
 import { ChatMessage, ChatResponse } from "../types";
 
+const EXAMPLE_QUERIES = [
+  "What do I need to configure for dangerous goods transport?",
+  "We ship lithium batteries internationally — what do we need to configure?",
+  "What must be configured before assigning hazard statements to hazard classes?",
+  "How does the system determine the packing instruction for lithium batteries?",
+  "How is the tax calculation procedure assigned to a country?",
+  "Which settings are specific to business places in Brazil?",
+];
+
 
 export default function HomePage() {
   const { chat, getObject } = useApi();
@@ -665,12 +674,23 @@ export default function HomePage() {
     <div className="flex flex-col h-[calc(100vh-200px)]">
       <div className="bg-white border border-borderWarm rounded-lg flex flex-col flex-1 min-h-0 overflow-hidden">
         {messages.length === 0 && (
-          <div className="text-center py-4 text-gray-700 flex-shrink-0 border-b">
-            <p className="text-lg">Start a conversation</p>
-            <p className="text-sm mt-2">
-              Ask questions about SAP Customizing, e.g., "What do I need to
-              configure for dangerous goods transport?"
+          <div className="py-4 text-gray-700 flex-shrink-0 border-b">
+            <p className="text-lg text-center">What do you want to configure?</p>
+            <p className="text-xs text-gray-500 text-center mt-1">
+              Grounded answers with citations — from the SAP standard, the
+              company standard, or both (pick a scope below the input box).
             </p>
+            <div className="flex flex-wrap gap-2 justify-center mt-3 px-4">
+              {EXAMPLE_QUERIES.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => setInput(q)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-borderWarm bg-gray-50 hover:bg-gray-100 text-gray-700"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className="overflow-y-auto space-y-4 p-4 flex-1 min-h-0">
@@ -712,24 +732,6 @@ export default function HomePage() {
 
         <div className="border-t p-4 flex-shrink-0">
           <div className="flex flex-col gap-1">
-            <div className="flex gap-2 items-center mb-2">
-              <label htmlFor="corpus-scope" className="text-xs text-gray-500">
-                Documentation scope:
-              </label>
-              <select
-                id="corpus-scope"
-                value={scope}
-                onChange={(e) =>
-                  setScope(e.target.value as "standard" | "nova" | "both")
-                }
-                className="input bg-gray-50 h-9 text-sm w-72"
-                disabled={isLoading}
-              >
-                <option value="both">SAP standard + Company standard</option>
-                <option value="standard">SAP standard only</option>
-                <option value="nova">Company standard (NOVA) only</option>
-              </select>
-            </div>
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -755,9 +757,29 @@ export default function HomePage() {
                 Reset
               </button>
             </div>
-            <p className="text-xs text-gray-500 text-right">
-              Press Enter to send, Shift+Enter for new line
-            </p>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2 items-center">
+                <label htmlFor="corpus-scope" className="text-xs text-gray-500">
+                  Scope:
+                </label>
+                <select
+                  id="corpus-scope"
+                  value={scope}
+                  onChange={(e) =>
+                    setScope(e.target.value as "standard" | "nova" | "both")
+                  }
+                  className="input bg-gray-50 h-8 text-xs w-64"
+                  disabled={isLoading}
+                >
+                  <option value="both">SAP standard + Company standard</option>
+                  <option value="standard">SAP standard only</option>
+                  <option value="nova">Company standard (NOVA) only</option>
+                </select>
+              </div>
+              <p className="text-xs text-gray-500">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </div>
           </div>
         </div>
       </div>
