@@ -25,6 +25,7 @@ export default function HomePage() {
   const [isLoadingCitation, setIsLoadingCitation] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,15 +47,21 @@ export default function HomePage() {
     setInput("");
     setIsLoading(true);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const response = await chat({
-        message: input.trim(),
-        session_id: sessionId || undefined,
-        scope,
-        history: messages.filter(
-          (m) => m.role === "user" || m.role === "assistant",
-        ),
-      });
+      const response = await chat(
+        {
+          message: input.trim(),
+          session_id: sessionId || undefined,
+          scope,
+          history: messages.filter(
+            (m) => m.role === "user" || m.role === "assistant",
+          ),
+        },
+        controller.signal,
+      );
 
       if (response.data) {
         const chatResponse: ChatResponse = response.data;
@@ -72,7 +79,10 @@ export default function HomePage() {
 
         setMessages((prev) => [...prev, assistantMessage]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        return; // stopped by the user; finally resets the loading state
+      }
       console.error("Chat error:", error);
       const errorMessage: ChatMessage = {
         role: "assistant",
@@ -82,6 +92,10 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleStop = () => {
+    abortRef.current?.abort();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -742,13 +756,22 @@ export default function HomePage() {
                 className="input flex-1 bg-gray-50 h-10"
                 disabled={isLoading}
               />
-              <button
-                onClick={handleSend}
-                className="btn btn-primary px-6 py-2 h-10"
-                disabled={!input.trim() || isLoading}
-              >
-                Send
-              </button>
+              {isLoading ? (
+                <button
+                  onClick={handleStop}
+                  className="btn btn-secondary px-6 py-2 h-10"
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  className="btn btn-primary px-6 py-2 h-10"
+                  disabled={!input.trim() || isLoading}
+                >
+                  Send
+                </button>
+              )}
               <button
                 onClick={handleReset}
                 className="btn btn-secondary px-6 py-2 h-10"

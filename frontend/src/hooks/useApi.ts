@@ -7,7 +7,8 @@ export const useApi = () => {
   const request = useCallback(async <T>(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     endpoint: string,
-    data?: any
+    data?: any,
+    signal?: AbortSignal
   ): Promise<ApiResponse<T>> => {
     try {
       const options: RequestInit = {
@@ -21,6 +22,10 @@ export const useApi = () => {
         options.body = JSON.stringify(data);
       }
 
+      if (signal) {
+        options.signal = signal;
+      }
+
       const response = await fetch(`${API_BASE}${endpoint}`, options);
 
       if (!response.ok) {
@@ -32,7 +37,12 @@ export const useApi = () => {
 
       const result = await response.json();
       return { data: result };
-    } catch (error) {
+    } catch (error: any) {
+      // Surface aborts to the caller (Stop button) instead of masking
+      // them as network errors.
+      if (error?.name === 'AbortError') {
+        throw error;
+      }
       console.error('API request failed:', error);
       return { error: 'Network error' };
     }
@@ -41,8 +51,8 @@ export const useApi = () => {
   // Specific API methods
   const api = {
     // Chat
-    chat: useCallback((data: { message: string; session_id?: string; history?: any[]; scope?: string }) =>
-      request<any>('POST', '/chat', data)
+    chat: useCallback((data: { message: string; session_id?: string; history?: any[]; scope?: string }, signal?: AbortSignal) =>
+      request<any>('POST', '/chat', data, signal)
     , []),
 
     // Objects
