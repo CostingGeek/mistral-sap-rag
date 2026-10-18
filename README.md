@@ -6,7 +6,8 @@ A local web application that lets users chat with SAP Customizing documentation 
 
 - **Chat** against SAP Customizing documentation with RAG and agentic retrieval
 - **Corpus scope selection**: ask against the SAP standard (DOKTL), the company standard (DOKTL_NOVA), or both
-- Source citations with clickable references
+- Source citations with clickable references, each badged with its corpus (SAP standard / Company Standard)
+- Per-message performance and token breakdown (intent, retrieval, graph, synthesis)
 - Rich markdown rendering of assistant answers: nested numbered/bulleted lists, tables, code blocks, and inline styles
 - Conversation history with reset capability
 
@@ -145,6 +146,7 @@ Example questions:
 All Mistral models:
 - **Embeddings**: `mistral-embed` (1024 dims)
 - **Chat & Analysis**: `mistral-medium-latest`
+- **Intent classification**: `mistral-small-latest` (configurable via `CLASSIFY_MODEL`)
 
 ## Data Flow
 
