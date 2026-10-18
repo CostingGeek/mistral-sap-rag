@@ -4,6 +4,7 @@ Mistral AI client for embeddings and chat.
 import json
 import logging
 import time
+import threading
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -31,6 +32,33 @@ class MistralClient:
             "Content-Type": "application/json",
         })
         self._rate_limit_delay = settings.mistral_rate_limit_delay
+        # Token usage of the most recent API call, kept per thread because
+        # sub-query retrieval runs in parallel
+        self._usage_local = threading.local()
+    
+    def _record_usage(self, result: Any) -> None:
+        """
+        Record the token usage of an API response for the current thread.
+        """
+        if not isinstance(result, dict):
+            return
+        usage = result.get("usage")
+        if not isinstance(usage, dict):
+            return
+        self._usage_local.last_usage = {
+            "prompt": usage.get("prompt_tokens", 0) or 0,
+            "completion": usage.get("completion_tokens", 0) or 0,
+            "total": usage.get("total_tokens", 0) or 0,
+        }
+    
+    def pop_last_usage(self) -> Optional[Dict[str, Any]]:
+        """
+        Return and clear the token usage recorded by the most recent call in
+        the current thread, or None if no usage was recorded.
+        """
+        usage = getattr(self._usage_local, "last_usage", None)
+        self._usage_local.last_usage = None
+        return usage
     
     def _request(
         self,
@@ -127,6 +155,7 @@ class MistralClient:
         }
         
         result = self._request("POST", "/embeddings", data)
+        self._record_usage(result)
         
         if "data" not in result or len(result["data"]) == 0:
             raise ValueError(f"No embedding data returned: {result}")
@@ -162,6 +191,7 @@ class MistralClient:
             }
             
             result = self._request("POST", "/embeddings", data)
+            self._record_usage(result)
             
             if "data" not in result:
                 raise ValueError(f"No embedding data returned: {result}")
@@ -220,7 +250,9 @@ class MistralClient:
         
         data.update(kwargs)
         
-        return self._request("POST", "/chat/completions", data, stream=stream)
+        result = self._request("POST", "/chat/completions", data, stream=stream)
+        self._record_usage(result)
+        return result
     
     # -------------------------------------------------------------------------
     # Helper Methods

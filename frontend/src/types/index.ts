@@ -3,6 +3,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   citations?: Citation[];
+  trace?: any[];
 }
 
 export interface Citation {
@@ -11,6 +12,9 @@ export interface Citation {
   title: string;
   section_type: string;
   distance: number;
+  corpus?: "standard" | "nova";
+  graph_expanded?: boolean;
+  source_no?: number;
 }
 
 export interface ChatRequest {

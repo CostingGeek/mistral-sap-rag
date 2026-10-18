@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     # Model Configuration
     embed_model: str = "mistral-embed"
     chat_model: str = "mistral-medium-latest"
+    # Intent classification is a simple routing task; a small model is fast and sufficient
+    classify_model: str = "mistral-small-latest"
     
     # Retrieval Configuration
     retrieval_k: int = 8

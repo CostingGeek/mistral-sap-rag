@@ -34,6 +34,9 @@ class ChunkInfo(BaseModel):
     section_type: str = Field(..., description="Section type")
     distance: float = Field(..., description="Similarity distance")
     content: str = Field(..., description="Chunk content")
+    corpus: Optional[str] = Field(None, description="Corpus the chunk belongs to: standard | nova")
+    graph_expanded: bool = Field(False, description="True for chunks added via graph expansion (not distance-ranked)")
+    source_no: Optional[int] = Field(None, description="Source number used in the answer's [Source N] citations")
 
 
 class ObjectInfo(BaseModel):

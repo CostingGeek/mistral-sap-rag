@@ -3,6 +3,8 @@ Chat service for agentic retrieval and conversation.
 """
 import json
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.config import settings
@@ -32,7 +34,7 @@ class ChatService:
         self._object_info_cache: Dict[str, Optional[Dict[str, Any]]] = {}
         self.mistral_client = mistral_client
     
-    def classify_intent(self, question: str) -> Dict[str, Any]:
+    def classify_intent(self, question: str) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
         """
         Classify the intent of a question.
         
@@ -40,10 +42,10 @@ class ChatService:
             question: The user's question
         
         Returns:
-            Intent classification with potential sub-queries
+            Tuple of (intent classification, token usage or None)
         """
         prompt = f"""
-Classify the following question and determine if it should be decomposed into sub-queries.
+Classify the following question and determine if it should be decomposed into sub-queries. Only decompose if the question genuinely spans separate topics; prefer a single query otherwise.
 
 Question: {question}
 
@@ -58,6 +60,7 @@ Return only the JSON object, no other text.
         try:
             result = self.mistral_client.extract_json_response(
                 prompt,
+                model=settings.classify_model,
                 schema={
                     "type": "object",
                     "properties": {
@@ -67,10 +70,10 @@ Return only the JSON object, no other text.
                     }
                 }
             )
-            return result
+            return result, self.mistral_client.pop_last_usage()
         except Exception as e:
             logger.warning(f"Intent classification failed: {e}, using simple query")
-            return {"type": "simple", "query": question}
+            return {"type": "simple", "query": question}, None
     
     def retrieve_chunks(
         self,
@@ -110,7 +113,8 @@ Return only the JSON object, no other text.
                 title=row["title"],
                 section_type=row["section_type"],
                 distance=row["distance"],
-                content=row["content"]
+                content=row["content"],
+                corpus=row.get("corpus")
             )
             for row in results
         ]
@@ -136,35 +140,37 @@ Return only the JSON object, no other text.
         additional_chunks = []
         
         for hop in range(hops):
-            # Get references for each object
-            for object_id in object_ids:
-                graph = self.bq_client.get_related_objects(object_id, depth=1, scope=scope)
-                
+            # One query for all roots' references, one for all new objects' info
+            graphs = self.bq_client.get_related_objects_batch(list(object_ids), scope=scope)
+            new_targets = set()
+            for graph in graphs.values():
                 for edge in graph["edges"]:
                     edges.append(edge)
-                    
-                    # Get chunks for the related object
                     if edge["target"] not in object_ids:
-                        obj_id = edge["target"]
-                        cache_key = f"{scope}:{obj_id}"
-                        if cache_key not in self._object_info_cache:
-                            self._object_info_cache[cache_key] = self.bq_client.get_object_info(obj_id, scope=scope)
-                        obj_info = self._object_info_cache[cache_key]
-                        if obj_info and obj_info.get("sections"):
-                            # Create chunks for USE and SHORTTEXT sections
-                            for section_type, content in obj_info["sections"].items():
-                                if section_type in ["USE", "SHORTTEXT"]:
-                                    chunk_id = f"{edge['target']}::{section_type}"
-                                    additional_chunks.append(
-                                        ChunkInfo(
-                                            chunk_id=chunk_id,
-                                            object_id=edge["target"],
-                                            title=obj_info["title"],
-                                            section_type=section_type,
-                                            distance=0.0,  # Not applicable for graph-expanded chunks
-                                            content=content
-                                        )
-                                    )
+                        new_targets.add(edge["target"])
+            
+            if not new_targets:
+                break
+            
+            infos = self.bq_client.get_object_infos_batch(list(new_targets), scope=scope)
+            for obj_id, obj_info in infos.items():
+                self._object_info_cache[f"{scope}:{obj_id}"] = obj_info
+                if obj_info and obj_info.get("sections"):
+                    # Create chunks for USE and SHORTTEXT sections
+                    for section_type, content in obj_info["sections"].items():
+                        if section_type in ["USE", "SHORTTEXT"]:
+                            additional_chunks.append(
+                                ChunkInfo(
+                                    chunk_id=f"{obj_id}::{section_type}",
+                                    object_id=obj_id,
+                                    title=obj_info["title"],
+                                    section_type=section_type,
+                                    distance=0.0,  # Not applicable for graph-expanded chunks
+                                    content=content,
+                                    corpus=obj_info.get("corpus"),
+                                    graph_expanded=True
+                                )
+                            )
             
             object_ids.update({c.object_id for c in additional_chunks})
         
@@ -185,7 +191,7 @@ Return only the JSON object, no other text.
         query: str,
         chunks: List[ChunkInfo],
         history: Optional[List[ChatMessage]] = None
-    ) -> Tuple[str, List[Dict[str, Any]]]:
+    ) -> Tuple[str, List[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """
         Synthesize an answer from retrieved chunks.
         
@@ -195,13 +201,16 @@ Return only the JSON object, no other text.
             history: Optional conversation history
         
         Returns:
-            Tuple of (answer text, citations)
+            Tuple of (answer text, citations, token usage or None)
         """
         # Build the context from chunks
         context_parts = []
+        corpus_labels = {"standard": "SAP standard", "nova": "Company standard"}
         for i, chunk in enumerate(chunks):
+            corpus_label = corpus_labels.get(chunk.corpus) if chunk.corpus else None
+            corpus_part = f", Corpus: {corpus_label}" if corpus_label else ""
             context_parts.append(
-                f"Source {i+1} (Object: {chunk.object_id}, Section: {chunk.section_type}, Distance: {chunk.distance:.4f}):\n"
+                f"Source {i+1} (Object: {chunk.object_id}, Section: {chunk.section_type}{corpus_part}, Distance: {chunk.distance:.4f}):\n"
                 f"{chunk.title}\n"
                 f"{chunk.content}\n"
             )
@@ -229,7 +238,8 @@ Context:
 
 Guidelines:
 - Every claim must be supported by the context
-- Cite sources using the format: [Source N] where N is the source number
+- Cite sources using the format: [Source N] where N is the source number. Always include the square brackets, exactly as shown
+- When a source is labeled with a corpus, make clear whether the guidance comes from the SAP standard or the company standard
 - If the context doesn't contain enough information, say so explicitly
 - Be specific and detailed in your answers
 - Use technical SAP terminology
@@ -260,10 +270,13 @@ Now answer the user's question.
                     "object_id": chunk.object_id,
                     "title": chunk.title,
                     "section_type": chunk.section_type,
-                    "distance": chunk.distance
+                    "distance": chunk.distance,
+                    "corpus": chunk.corpus,
+                    "graph_expanded": chunk.graph_expanded,
+                    "source_no": i + 1,
                 })
         
-        return answer, citations
+        return answer, citations, self.mistral_client.pop_last_usage()
     
     def chat(
         self,
@@ -287,27 +300,50 @@ Now answer the user's question.
         if scope not in self.bq_client.VALID_SCOPES:
             raise ValueError(f"Invalid scope: {scope}. Must be one of {self.bq_client.VALID_SCOPES}")
         
+        t_start = time.perf_counter()
+
         # Step 1: Intent classification
-        intent = self.classify_intent(query)
-        trace = [{"step": "intent_classification", "result": intent}]
+        t = time.perf_counter()
+        intent, intent_tokens = self.classify_intent(query)
+        t_intent = time.perf_counter() - t
+        trace = [{
+            "step": "intent_classification",
+            "result": intent,
+            "duration_ms": round(t_intent * 1000),
+            "tokens": intent_tokens,
+        }]
         
         # Step 2: Generate queries
         if intent["type"] == "multi_intent":
-            queries = intent["sub_queries"]
+            # Latency scales with sub-query count; cap the fan-out
+            queries = intent["sub_queries"][:3]
             trace.append({"step": "query_decomposition", "queries": queries})
         else:
             queries = [intent.get("query", query)]
         
-        # Step 3: Retrieve chunks for each query
+        # Step 3: Retrieve chunks for each query (sub-queries run in parallel)
         all_chunks = []
-        for q in queries:
-            chunks = self.retrieve_chunks(q, top_k=top_k // len(queries), scope=scope)
-            all_chunks.extend(chunks)
-            trace.append({
-                "step": "retrieval",
-                "query": q,
-                "chunk_count": len(chunks)
-            })
+        t = time.perf_counter()
+        per_query_k = max(3, top_k // len(queries))
+
+        def _timed_retrieve(q: str):
+            started = time.perf_counter()
+            chunks = self.retrieve_chunks(q, top_k=per_query_k, scope=scope)
+            # Embedding token usage for this sub-query (thread-local in MistralClient)
+            tokens = self.mistral_client.pop_last_usage()
+            return q, chunks, round((time.perf_counter() - started) * 1000), tokens
+        
+        with ThreadPoolExecutor(max_workers=min(4, len(queries))) as pool:
+            for q, chunks, duration_ms, tokens in pool.map(_timed_retrieve, queries):
+                all_chunks.extend(chunks)
+                trace.append({
+                    "step": "retrieval",
+                    "query": q,
+                    "chunk_count": len(chunks),
+                    "duration_ms": duration_ms,
+                    "tokens": tokens
+                })
+        t_retrieval = time.perf_counter() - t
         
         # Deduplicate chunks
         seen_chunk_ids = set()
@@ -320,20 +356,25 @@ Now answer the user's question.
         all_chunks = unique_chunks
         
         # Step 4: Graph expansion
+        t = time.perf_counter()
         expanded_chunks, edges = self.expand_graph(all_chunks, hops=1, scope=scope)
+        t_graph = time.perf_counter() - t
         trace.append({
             "step": "graph_expansion",
             "original_count": len(all_chunks),
             "expanded_count": len(expanded_chunks),
-            "edge_count": len(edges)
+            "edge_count": len(edges),
+            "duration_ms": round(t_graph * 1000)
         })
         
         # Step 5: Synthesize answer
-        answer, citations = self.synthesize_answer(
+        t = time.perf_counter()
+        answer, citations, synthesis_tokens = self.synthesize_answer(
             query,
             expanded_chunks,
             history
         )
+        t_synthesis = time.perf_counter() - t
         
         # Build matched objects
         matched_objects = list({c.object_id for c in expanded_chunks})
@@ -344,7 +385,28 @@ Now answer the user's question.
             "edges": edges
         }
         
-        trace.append({"step": "synthesis", "answer_length": len(answer)})
+        trace.append({
+            "step": "synthesis",
+            "answer_length": len(answer),
+            "duration_ms": round(t_synthesis * 1000),
+            "tokens": synthesis_tokens,
+        })
+
+        total = time.perf_counter() - t_start
+        token_totals = {"prompt": 0, "completion": 0, "total": 0}
+        for entry in trace:
+            tokens = entry.get("tokens")
+            if tokens:
+                token_totals["prompt"] += tokens.get("prompt", 0) or 0
+                token_totals["completion"] += tokens.get("completion", 0) or 0
+        token_totals["total"] = token_totals["prompt"] + token_totals["completion"]
+        trace.append({"step": "total", "duration_ms": round(total * 1000), "tokens": token_totals})
+        logger.info(
+            "chat timing: total=%.2fs intent=%.2fs retrieval=%.2fs graph=%.2fs synthesis=%.2fs "
+            "(queries=%d, chunks=%d, tokens: %d in / %d out)",
+            total, t_intent, t_retrieval, t_graph, t_synthesis, len(queries), len(expanded_chunks),
+            token_totals["prompt"], token_totals["completion"],
+        )
         
         return ChatResponse(
             message=answer,
@@ -355,7 +417,10 @@ Now answer the user's question.
                     title=c["title"],
                     section_type=c["section_type"],
                     distance=c["distance"],
-                    content=""
+                    content="",
+                    corpus=c["corpus"],
+                    graph_expanded=c["graph_expanded"],
+                    source_no=c["source_no"],
                 )
                 for c in citations
             ],

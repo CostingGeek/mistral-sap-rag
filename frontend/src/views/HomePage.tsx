@@ -8,9 +8,35 @@ const EXAMPLE_QUERIES = [
   "What must be configured before assigning hazard statements to hazard classes?",
   "How does the system determine the packing instruction for lithium batteries?",
   "How is the tax calculation procedure assigned to a country?",
+  "How do I set up a payroll area for periodic payroll runs?",
   "Which settings are specific to business places in Brazil?",
 ];
 
+
+const TimingLine = ({ trace }: { trace: any[] }) => {
+  const sum = (step: string) =>
+    trace
+      .filter((t) => t.step === step && typeof t.duration_ms === "number")
+      .reduce((acc: number, t) => acc + t.duration_ms, 0);
+  const fmt = (name: string, ms: number) => `${name} ${(ms / 1000).toFixed(1)}s`;
+  const parts = [
+    ["intent", sum("intent_classification")],
+    ["retrieval", sum("retrieval")],
+    ["graph", sum("graph_expansion")],
+    ["synthesis", sum("synthesis")],
+  ].filter(([, ms]) => ms > 0) as [string, number][];
+  const total = sum("total");
+  const tokens = trace.find((t) => t.step === "total")?.tokens;
+  if (parts.length === 0) return null;
+  return (
+    <div className="text-xs text-gray-400 mt-1">
+      {parts.map(([name, ms]) => fmt(name, ms)).join(" · ")}
+      {total > 0 && ` · total ${(total / 1000).toFixed(1)}s`}
+      {tokens &&
+        ` · ${tokens.prompt.toLocaleString()} tok in / ${tokens.completion.toLocaleString()} tok out`}
+    </div>
+  );
+};
 
 export default function HomePage() {
   const { chat, getObject } = useApi();
@@ -75,6 +101,7 @@ export default function HomePage() {
           role: "assistant",
           content: chatResponse.message,
           citations: chatResponse.citations,
+          trace: chatResponse.trace,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
@@ -119,7 +146,7 @@ export default function HomePage() {
     
     try {
       // Try to fetch full content from API
-      const response = await getObject(citation.object_id);
+      const response = await getObject(citation.object_id, citation.corpus);
       
       if (response.data) {
         const content = response.data;
@@ -160,7 +187,7 @@ export default function HomePage() {
 
   const formatCitation = (citation: any, index: number) => (
     <div key={index} className="citation">
-      <strong>Source {index + 1}:</strong> {citation.title} (
+      <strong>Source {citation.source_no ?? index + 1}:</strong> {citation.title} (
       <button
         className="text-blue-600 hover:text-blue-800 underline cursor-pointer bg-transparent border-none p-0 font-mono"
         onClick={async (e) => {
@@ -170,8 +197,21 @@ export default function HomePage() {
       >
         {citation.object_id}
       </button>)
+      {citation.corpus && (
+        <span
+          className={`ml-1 text-xs px-1.5 py-0.5 rounded border align-middle ${
+            citation.corpus === "nova"
+              ? "bg-amber-100 text-amber-900 border-amber-400"
+              : "bg-blue-50 text-blue-800 border-blue-200"
+          }`}
+        >
+          {citation.corpus === "nova" ? "Company Standard" : "SAP standard"}
+        </span>
+      )}
       <div className="text-xs mt-1 opacity-70">
-        Similarity: {(1 - citation.distance).toFixed(3)}
+        {citation.graph_expanded
+          ? "Added via graph expansion — not distance-ranked"
+          : `Similarity: ${(1 - citation.distance).toFixed(3)}`}
       </div>
     </div>
   );
@@ -724,6 +764,7 @@ export default function HomePage() {
                 <div className="whitespace-pre-wrap markdown-content">
                   {message.role === "assistant" ? renderMarkdown(message.content) : message.content}
                 </div>
+                {message.role === "assistant" && message.trace && <TimingLine trace={message.trace} />}
                 {message.citations && message.citations.length > 0 && (
                   <div className="mt-3 space-y-2">
                     <div className="text-xs font-medium text-gray-500 mb-1">
@@ -800,7 +841,7 @@ export default function HomePage() {
                 >
                   <option value="both">SAP standard + Company standard</option>
                   <option value="standard">SAP standard only</option>
-                  <option value="nova">Company standard (NOVA) only</option>
+                  <option value="nova">Company standard only</option>
                 </select>
               </div>
               <p className="text-xs text-gray-500">

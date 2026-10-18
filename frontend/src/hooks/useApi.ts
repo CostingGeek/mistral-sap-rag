@@ -56,8 +56,8 @@ export const useApi = () => {
     , []),
 
     // Objects
-    getObject: useCallback((objectId: string) =>
-      request<any>('GET', `/object/${encodeURIComponent(objectId)}`)
+    getObject: useCallback((objectId: string, scope?: string) =>
+      request<any>('GET', `/object/${encodeURIComponent(objectId)}${scope ? `?scope=${scope}` : ''}`)
     , []),
 
     getObjectGraph: useCallback((objectId: string) =>
