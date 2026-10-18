@@ -96,3 +96,5 @@ service-account.json
 
 # Source files
 *.csv.gz
+# Project data and notebooks stay local
+doc/
