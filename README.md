@@ -256,7 +256,7 @@ For production deployment:
 
 | Risk | Mitigation |
 |------|------------|
-| Hallucination prevention | Results require >=1 match with distance < similarity_threshold (configurable) |
+| Hallucination prevention | Verdicts are decided by the LLM on retrieved content; the similarity threshold (0.4) is only a coarse no-results guard — golden-set calibration shows match/no-match distance bands overlap, so distance is never treated as confidence |
 | OCR garbles tables | OCR extraction prompt tolerant to noise |
 | OCR API unavailable | pypdf fallback for local PDF text extraction |
 | Mistral API returns malformed data | Type validation with regex JSON extraction fallback |

@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     
     # Retrieval Configuration
     retrieval_k: int = 8
+    # Coarse no-results guard ONLY: golden-set calibration (ingestion notebook,
+    # Step 7) shows true-match (0.10-0.24) and negative (0.248-0.296) distance
+    # bands overlap, so distance is never treated as confidence. Fit/gap/
+    # question verdicts are decided by the LLM on retrieved content.
     similarity_threshold: float = 0.4
     
     # File Upload Configuration
