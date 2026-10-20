@@ -14,7 +14,9 @@
     "lint": "npm run lint:backend && npm run lint:frontend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@testing-library/react": "^16.3.3",
+    "concurrently": "^8.2.2",
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "sap",

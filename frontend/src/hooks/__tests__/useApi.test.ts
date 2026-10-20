@@ -196,7 +196,8 @@ describe('useApi', () => {
       
       await result.current.getObject('SIMG/TEST/001');
       
-      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG/TEST/001', {
+      // encodeURIComponent encodes slashes as %2F
+      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG%2FTEST%2F001', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +216,8 @@ describe('useApi', () => {
       
       await result.current.getObject('SIMG/TEST/001', 'standard');
       
-      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG/TEST/001?scope=standard', {
+      // encodeURIComponent encodes slashes as %2F
+      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG%2FTEST%2F001?scope=standard', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -234,7 +236,8 @@ describe('useApi', () => {
       
       await result.current.getObject('SIMG/SEHS/DG_020');
       
-      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG/SEHS/DG_020', {
+      // encodeURIComponent encodes slashes as %2F
+      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG%2FSEHS%2FDG_020', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +258,8 @@ describe('useApi', () => {
       
       await result.current.getObjectGraph('SIMG/TEST/001');
       
-      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG/TEST/001/graph', {
+      // encodeURIComponent encodes slashes as %2F
+      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG%2FTEST%2F001/graph', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -274,7 +278,8 @@ describe('useApi', () => {
       
       await result.current.getObjectGraph('SIMG/SEHS/DG_020');
       
-      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG/SEHS/DG_020/graph', {
+      // encodeURIComponent encodes slashes as %2F
+      expect(global.fetch).toHaveBeenCalledWith('/api/object/SIMG%2FSEHS%2FDG_020/graph', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

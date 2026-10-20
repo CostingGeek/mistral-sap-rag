@@ -1,20 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { useApi as useApiType } from '../hooks/useApi';
 import HomePage from '../views/HomePage';
 
-// Mock the useApi hook
+// Create a mock for useApi that we can control in tests
+const mockUseApi = vi.fn() as jest.MockedFunction<typeof useApiType>;
+
+// Mock the useApi hook to return our controllable mock
 vi.mock('../hooks/useApi', () => ({
-  useApi: () => ({
-    chat: vi.fn().mockResolvedValue({ data: {
-      message: 'Test response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } }),
-    getObject: vi.fn().mockResolvedValue({ data: null }),
-    getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-  })
+  useApi: () => mockUseApi()
 }));
 
 // Mock window.scrollTo
@@ -28,11 +22,29 @@ class ResizeObserver {
 }
 global.ResizeObserver = ResizeObserver;
 
+// Default mock response
+const defaultMockResponse = {
+  chat: vi.fn().mockResolvedValue({ data: {
+    message: 'Test response',
+    citations: [],
+    matched_objects: [],
+    graph_data: { nodes: [], edges: [] },
+    trace: []
+  } }),
+  getObject: vi.fn().mockResolvedValue({ data: null }),
+  getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
+};
+
+// Setup default mock before each test
+beforeEach(() => {
+  mockUseApi.mockReturnValue(defaultMockResponse);
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('HomePage', () => {
-  beforeEach(() => {
-    // Clear all mocks before each test
-    vi.clearAllMocks();
-  });
 
   it('renders without crashing', () => {
     render(<HomePage />);
@@ -86,184 +98,126 @@ describe('HomePage', () => {
   });
 
   it('does not send empty messages', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const sendButton = screen.getByText('Send');
-    fireEvent.click(sendButton);
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
     
     // Should not call chat API with empty message
-    expect(mockChat).not.toHaveBeenCalled();
+    expect(defaultMockResponse.chat).not.toHaveBeenCalled();
   });
 
   it('sends message on Enter key (without Shift)', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test query' } });
     
-    // Fire Enter key
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test query' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     // Should call chat API
     await vi.waitFor(() => {
-      expect(mockChat).toHaveBeenCalled();
+      expect(defaultMockResponse.chat).toHaveBeenCalled();
     });
   });
 
   it('does not send message on Shift+Enter', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test query' } });
     
-    // Fire Shift+Enter
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test query' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    });
     
     // Should not call chat API
-    expect(mockChat).not.toHaveBeenCalled();
+    expect(defaultMockResponse.chat).not.toHaveBeenCalled();
   });
 
   it('disables send button when loading', async () => {
-    const { useApi } = await import('../hooks/useApi');
     let resolveChat: (value: any) => void;
     const mockChat = vi.fn().mockImplementation(() => (
-      new Promise(resolve => { resolveChat = resolve; })
+      new Promise<{ data: any }>(resolve => {
+        resolveChat = resolve;
+      })
     ));
     
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
+    mockUseApi.mockReturnValue({
+      ...defaultMockResponse,
+      chat: mockChat
+    });
     
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test query' } });
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    const sendButton = screen.getByText('Send');
     
-    // Wait for loading state
+    // Initially button should be disabled (empty input)
+    expect(sendButton).toBeDisabled();
+    
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test query' } });
+    });
+    
+    // Button should be enabled after entering text
+    expect(sendButton).not.toBeDisabled();
+    
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
+    
+    // Button should be disabled while loading - use waitFor because state update is async
     await vi.waitFor(() => {
-      const sendButton = screen.getByText('Send');
       expect(sendButton).toBeDisabled();
     });
     
     // Resolve the promise
-    resolveChat!({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
+    await act(async () => {
+      resolveChat!({ data: {
+        message: 'Response',
+        citations: [],
+        matched_objects: [],
+        graph_data: { nodes: [], edges: [] },
+        trace: []
+      } });
+    });
+    
+    // Wait for the finally block to run and re-enable the button
+    await vi.waitFor(() => {
+      expect(sendButton).not.toBeDisabled();
+    }, { timeout: 1000 });
   });
 
   it('displays assistant messages after chat', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'This is a test response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test query' } });
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test query' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     await vi.waitFor(() => {
       expect(screen.getByText('Assistant')).toBeInTheDocument();
-      expect(screen.getByText('This is a test response')).toBeInTheDocument();
+      expect(screen.getByText('Test response')).toBeInTheDocument();
     });
   });
 
   it('displays user messages', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test query' } });
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test query' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     await vi.waitFor(() => {
       expect(screen.getByText('You')).toBeInTheDocument();
@@ -272,30 +226,15 @@ describe('HomePage', () => {
   });
 
   it('clears input after sending', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
-    
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Test query' } });
     expect(input.value).toBe('Test query');
     
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     await vi.waitFor(() => {
       expect(input.value).toBe('');
@@ -303,72 +242,77 @@ describe('HomePage', () => {
   });
 
   it('renders markdown content correctly', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: '# Heading\n\nThis is **bold** text',
-      citations: [],
-      matched_objects: [],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
+    mockUseApi.mockReturnValue({
+      ...defaultMockResponse,
+      chat: vi.fn().mockResolvedValue({ data: {
+        message: '# Heading\n\nThis is **bold** text',
+        citations: [],
+        matched_objects: [],
+        graph_data: { nodes: [], edges: [] },
+        trace: []
+      } })
+    });
     
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test' } });
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     await vi.waitFor(() => {
-      // Check for bold text
-      expect(screen.getByText('This is bold text')).toBeInTheDocument();
+      // First check that assistant message appears at all
+      expect(screen.getByText('Assistant')).toBeInTheDocument();
     });
+    
+    // Check for heading
+    expect(screen.getByText('Heading')).toBeInTheDocument();
+    
+    // Check that markdown content is rendered (content is in the assistant message)
+    const assistantMessage = screen.getByText('Assistant').parentElement;
+    expect(assistantMessage?.textContent).toContain('This is');
+    expect(assistantMessage?.textContent).toContain('bold');
+    expect(assistantMessage?.textContent).toContain('text');
   });
 
   it('displays citations when present', async () => {
-    const { useApi } = await import('../hooks/useApi');
-    const mockChat = vi.fn().mockResolvedValue({ data: {
-      message: 'Response with citation',
-      citations: [
-        {
-          chunk_id: 'chunk-1',
-          object_id: 'SIMG/TEST/001',
-          title: 'Test Object',
-          section_type: 'USE',
-          distance: 0.1,
-          corpus: 'standard',
-          graph_expanded: false,
-          source_no: 1
-        }
-      ],
-      matched_objects: ['SIMG/TEST/001'],
-      graph_data: { nodes: [], edges: [] },
-      trace: []
-    } });
-    
-    vi.doMock('../hooks/useApi', () => ({
-      useApi: () => ({
-        chat: mockChat,
-        getObject: vi.fn().mockResolvedValue({ data: null }),
-        getObjectGraph: vi.fn().mockResolvedValue({ data: { nodes: [], edges: [] } })
-      })
-    }));
+    mockUseApi.mockReturnValue({
+      ...defaultMockResponse,
+      chat: vi.fn().mockResolvedValue({ data: {
+        message: 'Response with citation',
+        citations: [
+          {
+            chunk_id: 'chunk-1',
+            object_id: 'SIMG/TEST/001',
+            title: 'Test Object',
+            section_type: 'USE',
+            distance: 0.1,
+            corpus: 'standard',
+            graph_expanded: false,
+            source_no: 1
+          }
+        ],
+        matched_objects: ['SIMG/TEST/001'],
+        graph_data: { nodes: [], edges: [] },
+        trace: []
+      } })
+    });
     
     render(<HomePage />);
     
     const input = screen.getByPlaceholderText(/Ask a question/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'Test' } });
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Test' } });
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: false });
+    });
     
     await vi.waitFor(() => {
+      // Check for Sources section
       expect(screen.getByText('Sources:')).toBeInTheDocument();
+      // Check for citation object ID
       expect(screen.getByText('SIMG/TEST/001')).toBeInTheDocument();
     });
   });

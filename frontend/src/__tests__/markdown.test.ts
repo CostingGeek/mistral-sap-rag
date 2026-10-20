@@ -69,7 +69,8 @@ Source 1: Some source`;
         } else if (trimmed && inOrderedList) {
           const unorderedMatch = trimmed.match(/^[-*\u2022]\s+(.*)/);
           
-          if (!unorderedMatch && /^[A-Z][a-zA-Z ]+:.*Source.*\d+/.test(trimmed)) {
+          // Updated regex to match "Source N:" format
+          if (!unorderedMatch && /^Source \d+:.*/.test(trimmed)) {
             result.push('  - ' + trimmed);
           } else {
             result.push(line);
@@ -271,7 +272,10 @@ describe('Citation Extraction', () => {
     
     // Simulate the extraction logic from chat_service
     for (let i = 0; i < chunks.length; i++) {
-      if (`[Source ${i + 1}]` as string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') in text) {
+      const citationMarker = `[Source ${i + 1}]`;
+      const escaped = citationMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped);
+      if (regex.test(text)) {
         citations.push(chunks[i]);
       }
     }
