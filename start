@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Project startup script for SAP RAG Application
+# Runs regression tests, shows git status, and lists open tasks
+
+echo "=========================================="
+echo "SAP RAG Application - Starting up..."
+echo "=========================================="
+echo ""
+
+# Show current git status
+echo "Git Status:"
+echo "----------------------------------------"
+git status --short 2>/dev/null || echo "  (Not a git repository or git not available)"
+echo ""
+
+# Show open tasks from various sources
+echo "Open Tasks:"
+echo "----------------------------------------"
+
+# Check for TODO.md
+if [ -f "TODO.md" ]; then
+    echo "  From TODO.md:"
+    grep -E "^\s*[-*\[]" TODO.md | head -5 || cat TODO.md | head -5
+    echo ""
+fi
+
+# Check for .todo file
+if [ -f ".todo" ]; then
+    echo "  From .todo:"
+    cat .todo | head -5
+    echo ""
+fi
+
+# Check for issues in git branches
+GIT_ISSUES=$(git branch -a 2>/dev/null | grep -E "issue|fix|bug|todo" | head -5)
+if [ -n "$GIT_ISSUES" ]; then
+    echo "  Git branches with issues:"
+    echo "$GIT_ISSUES"
+    echo ""
+fi
+
+# If no task files found
+if [ ! -f "TODO.md" ] && [ ! -f ".todo" ] && [ -z "$GIT_ISSUES" ]; then
+    echo "  No open task files found."
+    echo "  (Create TODO.md or .todo to track your tasks)"
+fi
+
+echo ""
+echo "Running regression tests..."
+echo "----------------------------------------"
+
+# Run tests with coverage and verbose output
+./run-tests --coverage --verbose
+TEST_RESULT=$?
+
+echo ""
+echo "=========================================="
+
+if [ $TEST_RESULT -eq 0 ]; then
+    echo "✅ All 99 tests passed!"
+    echo ""
+    echo "You're ready to work on the SAP RAG application."
+    echo ""
+    echo "Quick commands:"
+    echo "  make dev           - Start backend server"
+    echo "  make frontend     - Start frontend dev server"
+    echo "  @run-tests        - Re-run tests"
+    echo "  @run-tests api    - Run API tests only"
+else
+    echo "❌ Tests failed! Please fix before continuing."
+    echo ""
+    echo "Failed tests need to be resolved."
+    exit 1
+fi
+
+echo "=========================================="

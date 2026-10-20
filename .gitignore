@@ -100,3 +100,6 @@ service-account.json
 doc/*.csv
 doc/*.gz
 doc/desktop.ini
+
+# Local presentation file
+doc/Mistral Presentation.pdf

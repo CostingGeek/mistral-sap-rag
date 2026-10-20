@@ -1,0 +1,184 @@
+# Pre-commit hooks configuration for SAP RAG Chat Application
+# Run: pre-commit install
+# Manual run: pre-commit run --all-files
+
+repos:
+  # Detect secrets and API keys
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        # Scan all files for secrets
+        exclude: |
+          (?x)^(
+            .*\.min\.(js|css)$ |
+            .*\.lock$ |
+            .*\.pyc$ |
+            .*\.log$ |
+            .*\.sqlite3$ |
+            node_modules/.* |
+            \.git/.* |
+            \.venv/.* |
+            frontend/node_modules/.* |
+            dist/.*
+          )$
+
+  # Prevent accidental commit of large files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+        exclude: |
+          (?x)^(
+            .*\.lock$ |
+            .*\.ipynb$ |
+            frontend/node_modules/.*
+          )$
+
+  # Check for debug statements
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: debug-statements
+        language_version: python3
+
+  # Check Python syntax
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-xml
+      - id: check-yaml
+        exclude: ^frontend/.*
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: fix-encoding-pragma
+        args: [--remove]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--check, --diff]
+
+  # Python import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--check-only, --diff]
+
+  # Python linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear==23.7.0]
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.36.0
+    hooks:
+      - id: markdownlint
+        exclude: ^frontend/.*
+
+  # Detect AWS credentials
+  - repo: https://github.com/awslabs/git-secrets
+    rev: 1.4.0
+    hooks:
+      - id: aws-credentials
+        args: [--scan-all-files]
+
+  # Custom hook: Check for common API key patterns
+  - repo: local
+    hooks:
+      - id: check-api-keys
+        name: Check for common API key patterns
+        entry: bash -c '
+          # Patterns to detect
+          patterns=(
+            "api[_-]?key[_-]?[=:]" \
+            "API[_-]?KEY[_-]?[=:]" \
+            "secret[_-]?[=:]" \
+            "password[_-]?[=:]" \
+            "token[_-]?[=:]" \
+            "credential[s]?[_-]?[=:]" \
+            "auth[_-]?[=:]" \
+            "sk-[a-zA-Z0-9]{" \
+            "pk_[a-zA-Z0-9]{" \
+            "eyJ[a-zA-Z0-9]"  # JWT tokens
+          )
+          
+          # File types to check
+          file_patterns=("*.py" "*.md" "*.txt" "*.json" "*.toml" "*.yaml" "*.yml" "*.env")
+          
+          found=0
+          for pattern in "${patterns[@]}"; do
+            for fpattern in "${file_patterns[@]}"; do
+              files=$(git ls-files | grep "$fpattern" | grep -v ".venv" | grep -v "node_modules" | grep -v "dist" | grep -v "build")
+              for file in $files; do
+                if git grep -l -- "$pattern" "$file" 2>/dev/null; then
+                  echo "ERROR: Potential secret found in $file"
+                  git grep -- "$pattern" "$file"
+                  found=1
+                fi
+              done
+            done
+          done
+          
+          exit $found
+        '
+        language: system
+        pass_filenames: false
+
+  # Custom hook: Check for hardcoded GCP references
+  - repo: local
+    hooks:
+      - id: check-gcp-references
+        name: Check for hardcoded GCP project/dataset names
+        entry: bash -c '
+          # Check for hardcoded GCP project names (excluding docs and comments)
+          patterns=(
+            "mistral-sap" \
+            "sap_rag"
+          )
+          
+          file_patterns=("*.py" "*.toml")
+          
+          found=0
+          for pattern in "${patterns[@]}"; do
+            for fpattern in "${file_patterns[@]}"; do
+              files=$(git ls-files | grep "$fpattern" | grep -v ".venv" | grep -v "node_modules")
+              for file in $files; do
+                # Only check non-comment, non-string lines
+                if git grep -l --and --not -- "#" --not -- "\"\|\'\|\`\|'" "$pattern" "$file" 2>/dev/null; then
+                  echo "WARNING: Potential hardcoded GCP reference found in $file: $pattern"
+                  found=1
+                fi
+              done
+            done
+          done
+          
+          exit $found
+        '
+        language: system
+        pass_filenames: false

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run SAP RAG regression tests
+# Usage: ./run-tests [group] [options]
+# 
+# Examples:
+#   ./run-tests              # Run all tests
+#   ./run-tests api          # Run API tests only
+#   ./run-tests integ        # Run integration tests
+#   ./run-tests services      # Run service tests
+#   ./run-tests --verbose    # Verbose output
+#   ./run-tests --coverage   # With coverage
+
+cd "$(dirname "$0")"
+uv run python backend/tests/run_regression_tests.py "$@"

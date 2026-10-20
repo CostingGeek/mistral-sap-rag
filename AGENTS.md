@@ -14,8 +14,8 @@ project facts change.
 - Python deps are managed by uv (`pyproject.toml` + `uv.lock`). Run `uv lock`
   after changing dependencies. `backend/requirements.txt` is a legacy mirror —
   keep it in sync.
-- The backend talks to live GCP (project `mistral-sap`, dataset `sap_rag`,
-  us-central1) and the Mistral API. Importing `backend.main` instantiates
+- The backend talks to live GCP (configure your project and dataset in `.env`)
+  and the Mistral API. Importing `backend.main` instantiates
   BigQueryClient and hits BigQuery. Direct service calls in tests cost Mistral
   tokens — keep them small and purposeful.
 

@@ -56,7 +56,7 @@ Edit `.env` file with your configuration:
 ```bash
 # GCP Configuration
 GCP_PROJECT=your-gcp-project
-BQ_DATASET=sap_rag
+BQ_DATASET=your-dataset
 BUCKET=your-bucket-name
 
 # GCP Service Account Key (base64 encoded)
@@ -74,11 +74,11 @@ DEBUG=true
 
 ### 3. BigQuery Tables
 
-The ingestion pipeline (see `doc/ingest_sap_documentation_doktl.ipynb`) creates the corpus tables the backend reads:
-- `sap_rag.doktl_clean` - Cleaned SAP standard documentation chunks (~137k)
-- `sap_rag.doktl_embeddings` - Embeddings for searchable chunks (~46k)
-- `sap_rag.doktl_nova_clean` - Company-standard (Project NOVA) chunks - created by setting `CORPUS = "DOKTL_NOVA"` in the ingestion notebook
-- `sap_rag.doktl_nova_embeddings` - Embeddings for the NOVA corpus
+The ingestion pipeline (see `doc/ingest_sap_documentation_doktl.ipynb`) creates the corpus tables the backend reads in your configured dataset:
+- `<your-dataset>.doktl_clean` - Cleaned SAP standard documentation chunks (~137k)
+- `<your-dataset>.doktl_embeddings` - Embeddings for searchable chunks (~46k)
+- `<your-dataset>.doktl_nova_clean` - Company-standard (Project NOVA) chunks - created by setting `CORPUS = "DOKTL_NOVA"` in the ingestion notebook
+- `<your-dataset>.doktl_nova_embeddings` - Embeddings for the NOVA corpus
 
 ### 4. Frontend Setup
 

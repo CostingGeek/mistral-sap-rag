@@ -8,7 +8,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 
 from backend.config import settings
 from backend.integrations.bigquery_client import BigQueryClient
@@ -45,6 +45,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Exception handler for generic exceptions
+@app.exception_handler(Exception)
+async def handle_exception(request, exc):
+    logger.error(f"Internal server error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal server error", "detail": str(exc)},
+    )
 
 
 # =============================================================================

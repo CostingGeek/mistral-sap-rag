@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     
     # GCP Configuration
     gcp_project: str = ""
-    bq_dataset: str = "sap_rag"
+    bq_dataset: str = ""
     bucket_name: str = ""
     
     # GCP Service Account (base64 encoded JSON key)
