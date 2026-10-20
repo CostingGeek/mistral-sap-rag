@@ -128,6 +128,8 @@ response.session_id = "test-session"  # Match endpoint behavior
 
 **Lesson**: Simple bash scripts provide excellent developer experience with minimal overhead. They integrate seamlessly with Vibe's `@` file mention system.
 
+**Best Practice**: When presenting open tasks (e.g., in TODO.md or displayed by scripts), **use numbered lists** (e.g., `1. [ ] Task description`) instead of bullet points. This makes it easy to reference specific tasks in discussions, comments, and commits (e.g., "Working on task #3").
+
 ---
 
 ### 7. Factory Functions for Test Data

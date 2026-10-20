@@ -20,7 +20,7 @@ echo "----------------------------------------"
 # Check for TODO.md
 if [ -f "TODO.md" ]; then
     echo "  From TODO.md:"
-    grep -E "^\s*[-*\[]" TODO.md | head -5 || cat TODO.md | head -5
+    grep -E "^\s*[0-9]+\.\s*\[[xX ]\]" TODO.md | head -10 || grep -E "^\s*[-*\[]" TODO.md | head -5 || cat TODO.md | head -5
     echo ""
 fi
 
