@@ -6,8 +6,8 @@
 - [ ] Add tests for new features as they're developed
 
 ## Documentation
-- [ ] Review and clean up REGRESSION_TEST_SUMMARY.md
-- [ ] Update README.md with new test running instructions
+- [x] Review and clean up REGRESSION_TEST_SUMMARY.md
+- [x] Update README.md with new test running instructions
 
 ## Infrastructure
 - [ ] Consider refactoring main.py to use dependency injection (for better testability)

@@ -95,7 +95,7 @@ Start both backend and frontend:
 
 ```bash
 # Terminal 1: Backend
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+make dev
 
 # Terminal 2: Frontend
 cd frontend
@@ -137,8 +137,8 @@ Example questions:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/chat` | Send chat message (optional `scope` in body: `standard` / `nova` / `both`) |
-| GET | `/api/object/{id}` | Get SAP object info (optional `?scope=standard|nova|both`). `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
-| GET | `/api/object/{id}/graph` | Get related-objects graph for an object (optional `?scope=standard|nova|both`) |
+| GET | `/api/object/{id}` | Get SAP object info (optional `?scope=standard\|nova\|both`). `{id}` may contain slashes (e.g. `SIMG/SEHS/DG_020`); the frontend sends it URL-encoded |
+| GET | `/api/object/{id}/graph` | Get related-objects graph for an object (optional `?scope=standard\|nova\|both`) |
 | GET | `/api/health` | Health check |
 
 ## Models Used
@@ -172,7 +172,8 @@ sap-rag-app/
 ├── .env.example
 ├── Makefile
 ├── README.md
-├── BUILD_SUMMARY.md
+├── start                    # Project startup script
+├── run-tests               # Test runner script
 │
 ├── backend/
 │   ├── __init__.py
@@ -191,6 +192,12 @@ sap-rag-app/
 │   ├── services/
 │   │   ├── __init__.py
 │   │   └── chat_service.py      # Agentic chat
+│   │
+│   ├── tests/
+│   │   ├── conftest.py     # Test fixtures and factories
+│   │   ├── api/            # API endpoint tests
+│   │   ├── integrations/   # Integration tests
+│   │   └── services/       # Service layer tests
 │   │
 │   └── requirements.txt
 │
@@ -224,10 +231,47 @@ sap-rag-app/
 
 ## Testing
 
-Run backend tests:
+The project has a comprehensive test suite with **100 tests** (99 passing, 1 skipped).
+
+### Running Tests
+
 ```bash
-# Note: Tests are not currently implemented
+# Run all backend tests
+./run-tests
+
+# Run all tests with verbose output
+./run-tests --verbose
+
+# Run all tests with coverage
+./run-tests --coverage
+
+# Or use pytest directly
+uv run python -m pytest backend/tests/ -v
+
+# With coverage report
+uv run python -m pytest backend/tests/ --cov=backend --cov-report=term
 ```
+
+### Running Specific Test Groups
+
+```bash
+# API endpoint tests
+uv run python -m pytest backend/tests/api/ -v
+
+# Integration tests (BigQuery, Mistral clients)
+uv run python -m pytest backend/tests/integrations/ -v
+
+# Service layer tests
+uv run python -m pytest backend/tests/services/ -v
+```
+
+### Test Coverage
+
+The current test coverage is **91%** across the backend codebase. See the coverage report for details.
+
+### Regression Test Summary
+
+For details on the test implementation, fixes, and best practices, see [REGRESSION_TEST_SUMMARY.md](REGRESSION_TEST_SUMMARY.md).
 
 ## Deployment
 
